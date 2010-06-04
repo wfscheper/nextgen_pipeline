@@ -7,15 +7,17 @@ from optparse import OptionParser
 
 from ruffus import *
 
-from steps import *
+import prep_sequence as pipe1
 from log import *
 
 pipeline_stages = {
-    'sai': fastq_to_sai,
-    'sam': paired_ends_to_sam,
-    'bam': sam_to_bam,
-    'sort_bam': sort_bam,
-    'index_bam': bam_index,
+    'sequence': pipe1.copy_sequences,
+    'convert_qa': pipe1.illumina_to_sanger,
+    'sai': pipe1.fastq_to_sai,
+    'sam': pipe1.paired_ends_to_sam,
+    'bam': pipe1.sam_to_bam,
+    'sort_bam': pipe1.sort_bam,
+    'index_bam': pipe1.bam_index,
 }
 
 def show_pipeline_stage_help():
@@ -72,3 +74,4 @@ if __name__ == '__main__':
         pipeline_run([start_stage], forcedtorun_tasks=[start_stage], multiprocess=NUM_JOBS, logger=logger)
     else:
         pipeline_run([start_stage], multiprocess=NUM_JOBS, logger=logger)
+
