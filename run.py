@@ -14,16 +14,8 @@ pipeline_stages = {
     'sai': fastq_to_sai,
     'sam': paired_ends_to_sam,
     'bam': sam_to_bam,
-#    'bam_namesort': bam_namesort,
-#    'bam_fixmate': bam_fixmate,
     'sort_bam': sort_bam,
-#    'add_mdtags': add_mdtags,
-#    'merge_bam': merge_bam,
-#    'sort_merged': sort_merged_bam,
     'index_bam': bam_index,
-#    'pileup': build_pileup,
-#    'clean_pileup': clean_pileup,
-#    'analyze': analyze_pileup,
 }
 
 def show_pipeline_stage_help():
