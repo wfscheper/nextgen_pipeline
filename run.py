@@ -12,7 +12,6 @@ from log import *
 
 pipeline_stages = {
     'sequence': pipe1.copy_sequences,
-    'convert_qa': pipe1.illumina_to_sanger,
     'sai': pipe1.fastq_to_sai,
     'sam': pipe1.paired_ends_to_sam,
     'bam': pipe1.sam_to_bam,

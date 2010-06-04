@@ -4,6 +4,7 @@ import re
 import os
 import sys
 import logging
+from Bio import SeqIO
 from glob import glob
 from shutil import move, copy
 
@@ -47,27 +48,20 @@ def pmsg(msg, input, output):
 # Copy sequence from staging area
 def sequence_copy_generator():
     cwd = os.getcwd()
-    for file in glob('/media/thumper1/nextgen/staging_area/%_sequence.txt'):
+    for file in glob('/media/thumper1/nextgen/staging_area/*_sequence.txt'):
         filename = paired_strings['sequence'] % paired_re.search(file).groupdict()
-        yield [file, '%s/fastq/%s' % (cwd, filename)]
+        yield [file, '%s/fastq/%s.fastq.gz' % (cwd, filename.strip('.txt'))]
 
-@follows(mkdir['fastq'])
+@follows(mkdir('fastq'))
 @files(sequence_copy_generator)
 def copy_sequences(input_file, output_file):
     """Copy sequence files from staging area on thumper1"""
     cmd_dict = cdict.copy()
     cmd_dict['in_file'] = input_file
     cmd_dict['out_file'] = output_file
-    pmsg('Copying sequence files from staging area', cmd_dict['in_file'], cmd_dict['out_file'])
-    cpcmd = 'cp %(in_file)s %(out_file)s' % cmd_dict
-    call(cpcmd)
-
-# Convert illumina QS to sanger QS
-@fillows(sequence_copy_generator)
-@transform(sequence_copy_generator, regex(r'^(.*)/fastq/(.*).txt'), r'\1/fastq/\2.fastq')
-def illumina_to_sanger(input_file, output_file):
-    '''Convert Illumina quality scores to Sanger quality scores'''
-    SeqIO(input_file, 'fastq-illumina', output_file, 'fastq-sanger')
+    pmsg('Sequence Copy', cmd_dict['in_file'], cmd_dict['out_file'])
+    SeqIO.convert(input_file, 'fastq-illumina', output_file.strip('.gz'), 'fastq-sanger')
+    zip(output_file)
 
 # Convert fastq to sai
 def fastq_to_sai_generator():
@@ -76,13 +70,11 @@ def fastq_to_sai_generator():
         filename = '%s/sai/%s' % (cwd, paired_strings['sai'] % paired_re.search(file).groupdict())
         yield [file, filename]
 
-@follows(illumina_to_sanger, mkdir('sai'))
+@follows(copy_sequences, mkdir('sai'))
 @files(fastq_to_sai_generator)
 def fastq_to_sai(input_file, output_file):
     '''Convert FASTQ files to SAI files.'''
     cmd_dict = cdict.copy()
-    cmd_dict['fastq'] = input_file.strip('.gz')
-    cmd_dict['sai'] = output_file.strip('.gz')
     cmd_dict['in_file'] = input_file
     cmd_dict['out_file'] = output_file
     pmsg('FASTQ to SAI', cmd_dict['in_file'], cmd_dict['out_file'])
