@@ -126,9 +126,34 @@ def sam_to_bam(input_file, output_file):
     samcmd = '%(samtools)s import %(ref)s.fai %(infile)s %(ofile)s' % cmd_dict
     call(samcmd)
     
+# Sort BAM file by name
+@follows(sam_to_bam, mkdir('namesorted_bam'))
+@transform(sam_to_bam, regex(r'^(.*)/bam/(.*).bam$'), r'\1/namesorted_bam/\2.bam')
+def namesort_bam(input_file, output_file):
+    '''Sort BAM files by name.'''
+    cmd_dict = cdict.copy()
+    cmd_dict['infile'] = input_file
+    cmd_dict['outfile'] = output_file
+    cmd_dict['outprefix'] = os.path.splitext(output_file)
+    pmsg('BAM Name Sort', cmd_dict['infile'], cmd_dict['outfile'])
+    samcmd = '%(samtools)s sort -n %(infile)s %(outprefix)s' % cmd_dict
+    call(samcmd)
+
+# Run samtools fixmate on namesorted BAM file
+@follows(namesort_bam, mkdir('fixmate_bam'))
+@transform(namesort_bam, regex(r'^(.*)/namesorted_bam/(.*).namesorted.bam$'), r'\1/fixmate_bam/\2.fixmate.bam')
+def fixmate_bam(input_file, output_file):
+    '''Fix mate info in BAM file.'''
+    cmd_dict = cdict.copy()
+    cmd_dict['infile'] = input_file
+    cmd_dict['outfile'] = output_file
+    pmsg('Fix Mate Info', cmd_dict['infile'], cmd_dict['outfile'])
+    samcmd = '%(samtools)s fixmate %(infile)s %(outfile)s' % cmd_dict
+    call(samcmd)
+
 # Sort BAM file
-@follows(sam_to_bam, mkdir('sorted_bam'))
-@transform(sam_to_bam, regex(r'^(.*)/bam/(.*).bam'), r'\1/sorted_bam/\2.sorted.bam')
+@follows(fixmate_bam, mkdir('sorted_bam'))
+@transform(fixmate_bam, regex(r'^(.*)/fixmate_bam/(.*).fixmate.bam'), r'\1/sorted_bam/\2.sorted.bam')
 def sort_bam(input_file, output_file):
     '''Sort BAM files by coordinate.'''
     cmd_dict = cdict.copy()
