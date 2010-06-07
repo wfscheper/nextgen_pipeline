@@ -128,13 +128,13 @@ def sam_to_bam(input_file, output_file):
     
 # Sort BAM file by name
 @follows(sam_to_bam, mkdir('namesorted_bam'))
-@transform(sam_to_bam, regex(r'^(.*)/bam/(.*).bam$'), r'\1/namesorted_bam/\2.bam')
+@transform(sam_to_bam, regex(r'^(.*)/bam/(.*).bam$'), r'\1/namesorted_bam/\2.namesorted.bam')
 def namesort_bam(input_file, output_file):
     '''Sort BAM files by name.'''
     cmd_dict = cdict.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
-    cmd_dict['outprefix'] = os.path.splitext(output_file)
+    cmd_dict['outprefix'] = os.path.splitext(output_file)[0]
     pmsg('BAM Name Sort', cmd_dict['infile'], cmd_dict['outfile'])
     samcmd = '%(samtools)s sort -n %(infile)s %(outprefix)s' % cmd_dict
     call(samcmd)
