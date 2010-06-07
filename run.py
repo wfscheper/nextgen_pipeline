@@ -45,7 +45,7 @@ if __name__ == '__main__':
         else:
             start_stage = pipeline_stages[options.stage]
     else:
-        start_stage = bam_index
+        start_stage = pipe1.bam_index
     
     if options.threads:
         NUM_JOBS = options.threads if options.threads <= ncpus else ncpus
