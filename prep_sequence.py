@@ -19,14 +19,14 @@ cdict = {
 logger = logging.getLogger('main')
 
 # Copy sequence from staging area
-def sequence_copy_generator():
+def copy_sequence_generator():
     cwd = os.getcwd()
     for file in glob('/media/thumper1/nextgen/staging_area/*_sequence.txt'):
         filename = paired_strings['sequence'] % paired_re.search(file).groupdict()
         yield [file, '%s/fastq/%s.fastq.gz' % (cwd, filename.strip('.txt'))]
 
 @follows(mkdir('fastq'))
-@files(sequence_copy_generator)
+@files(copy_sequence_generator)
 def copy_sequences(input_file, output_file):
     """Copy sequence files from staging area on thumper1"""
     cmd_dict = cdict.copy()
@@ -92,7 +92,6 @@ def paired_ends_to_sam(input_files, output_file):
 def sam_to_bam(input_file, output_file):
     '''Convert SAM files to BAM files.'''
     cmd_dict = cdict.copy()
-    finfo = unpaired_re.search(input_file).groupdict()
     cmd_dict['infile'] = input_file
     cmd_dict['ofile'] = output_file
     pmsg('SAM to BAM', cmd_dict['infile'], cmd_dict['ofile'])
@@ -114,7 +113,8 @@ def namesort_bam(input_file, output_file):
 
 # Run samtools fixmate on namesorted BAM file
 @follows(namesort_bam, mkdir('fixmate_bam'))
-@transform(namesort_bam, regex(r'^(.*)/namesorted_bam/(.*).namesorted.bam$'), r'\1/fixmate_bam/\2.fixmate.bam')
+@transform(namesort_bam, regex(r'^(.*)/namesorted_bam/(.*).namesorted.bam$'), \
+        r'\1/fixmate_bam/\2.fixmate.bam')
 def fixmate_bam(input_file, output_file):
     '''Fix mate info in BAM file.'''
     cmd_dict = cdict.copy()
@@ -126,7 +126,8 @@ def fixmate_bam(input_file, output_file):
 
 # Sort BAM file
 @follows(fixmate_bam, mkdir('sorted_bam'))
-@transform(fixmate_bam, regex(r'^(.*)/fixmate_bam/(.*).fixmate.bam'), r'\1/sorted_bam/\2.sorted.bam')
+@transform(fixmate_bam, regex(r'^(.*)/fixmate_bam/(.*).fixmate.bam'), \
+        r'\1/sorted_bam/\2.sorted.bam')
 def sort_bam(input_file, output_file):
     '''Sort BAM files by coordinate.'''
     cmd_dict = cdict.copy()
