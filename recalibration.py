@@ -3,10 +3,9 @@ import os
 import logging
 
 from glob import glob
-from ruffus import *
+from ruffus import files, follows, inputs, mkdir, regex, transform
 
-from zipper import zip, unzip
-from utils import log_info, call
+from utils import call, pmsg, unpaired_re, unpaired_strings
 
 STANDARD_FILTER = '\"QUAL < 30.0 || AB > 0.75 && DP > 40 || QD < 5.0 || HRun > 5 || SB > -0.10\"'
 HARD_TO_VALIDATE_FILTER = '\"MQ0 >= 4 && ((MQ0 / (1.0 * DP)) > 0.1)\"'

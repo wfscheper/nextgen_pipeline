@@ -1,17 +1,12 @@
-import time
-import subprocess
-import re
 import os
-import sys
 import logging
 from Bio import SeqIO
 from glob import glob
-from shutil import move, copy
 
-from ruffus import *
+from ruffus import follows, files, inputs, mkdir, regex, transform
 
-from zipper import zip, unzip
-from utils import log_info, call
+from zipper import zip
+from utils import call, paired_re, paired_strings, pmsg
 
 cdict = {
     'bwa': '/usr/local/bin/bwa',
@@ -21,29 +16,7 @@ cdict = {
     'sampl': '/usr/bin/perl /usr/local/bin/samtools.pl'
 }
 
-fastq_regex = re.compile('fastq')
-paired_re = re.compile('(?P<line>[\d_]+)_s_(?P<lane>\d+)_(?P<pair>[12])(?P<rest>.*)')
-unpaired_re = re.compile('(?P<line>[\d_]+)_s_(?P<lane>\d+)(?P<ext>.*)')
-
-paired_strings = {
-    'sequence': '%(line)s_s_%(lane)s_%(pair)s_sequence.txt',
-    'fastq': '%(line)s_s_%(lane)s_%(pair)s_sequence.fastq',
-    'sai': '%(line)s_s_%(lane)s_%(pair)s.sai',
-}
-unpaired_strings = {
-    'sam': '%(line)s_s_%(lane)s.sam',
-    'bam': '%(line)s_s_%(lane)s.bam',
-}
-
 logger = logging.getLogger('main')
-
-def pmsg(msg, input, output):
-    msgs = {
-        'msg': msg,
-        'in': input,
-        'out': output,
-    }
-    print 'Running %(msg)s with input %(in)s and output %(out)s' % msgs
 
 # Copy sequence from staging area
 def sequence_copy_generator():
