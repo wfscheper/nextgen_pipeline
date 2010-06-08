@@ -55,3 +55,8 @@ cdict = {
 
 # Filter SNPs
 
+stages_dict = {
+    'count_covariates': count_covariates,
+    'default': count_covariates,
+}
+

@@ -175,3 +175,15 @@ def bam_index(input_file, output_file):
     idxcmd = '%(samtools)s index %(infile)s' % cmd_dict
     call(idxcmd)
 
+stages_dict = {
+    'copy_sequences': copy_sequences,
+    'align_sequences': fastq_to_sai,
+    'make_sam': paired_ends_to_sam,
+    'make_bam': sam_to_bam,
+    'namesort_bam': namesort_bam,
+    'fixmate_bam': fixmate_bam,
+    'sort_bam': sort_bam,
+    'index_bam': bam_index,
+    'default': bam_index,
+}
+
