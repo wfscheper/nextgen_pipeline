@@ -12,9 +12,15 @@ from ruffus import pipeline_run
 
 def show_pipeline_stage_help():
     print "The pipeline stage you selected does not exist."
-    print "Please choose one of the following options:"
-    for stage, fn in pipeline_stages.items():
-        print '\t%s:\t%s' % (stage, fn.__doc__)
+    print "Please choose one of the following options (* default stage):"
+    for pipeline, stages_dict in pipeline_stages.items():
+        print '\t%s' % (pipeline)
+        for stage, fn in stages_dict.items():
+            if stage is not 'default':
+                if fn == stages_dict['default']:
+                    print '\t\t*%s:\t%s' % (stage, fn.__doc__)
+                else:
+                    print '\t\t%s:\t%s' % (stage, fn.__doc__)
     sys.exit(0)
 
 parser = OptionParser()
@@ -42,7 +48,7 @@ if __name__ == '__main__':
         pipeline_stages.update({options.pipeline: pipeline.stages_dict})
 
     if options.stage:
-        if options.stage not in pipeline_stages.keys():
+        if options.stage not in pipeline_stages[options.pipeline].keys():
             show_pipeline_stage_help()
         else:
             start_stage = pipeline_stages[options.pipeline][options.stage]
