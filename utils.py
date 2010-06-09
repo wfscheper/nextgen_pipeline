@@ -14,7 +14,7 @@ paired_strings = {
 unpaired_strings = {
     'sam': '%(line)s_s_%(lane)s.sam',
     'bam': '%(line)s_s_%(lane)s.bam',
-    'recal_data': '%(line)s_s_%(lane)s.recal_data.csv',
+    'recal_data': '%(line)s_s_%(lane)s.sorted.csv',
 }
 
 logger = logging.getLogger('main')
