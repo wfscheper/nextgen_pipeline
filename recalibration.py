@@ -19,10 +19,6 @@ CMD_DICT = {
     'exome': '/usr/local/share/nextgen_resources/hg19_capture.interval_list',
     'genome': '/usr/local/share/nextgen_resources/human_g1k_v37.fasta',
     'dbsnp': '/usr/local/share/nextgen_resources/dbsnp_130_b37.rod',
-    # filters
-    'standard_filter': '\"QUAL < 30.0 || AB > 0.75 && DP > 40 || QD < 5.0 || HRun > 5 || ' + \
-        'SB > -0.10\"',
-    'hard_validate_filter': '\"MQ0 >= 4 && ((MQ0 / (1.0 * DP)) > 0.1)\"',
 }
 
 # Calculate Covariates for Quality Score Recalibration
@@ -74,24 +70,10 @@ def recal_count_covariates(input_file, output_file):
     '''Run CountCovariates on files in recal_bam/'''
     count_covariates(input_file, output_file)
 
-# Find candidate intervals for realignment
-
-# Realign around possible indels
-
-# Call Indels
-
-# Filter Indels
-
-# Call SNPs
-
-# Create InDel mask
-
-# Filter SNPs
-
 stages_dict = {
     'count_covariates': sorted_count_covariates,
     'recalibrate_quality': recalibrate_quality_scores,
     'recount_covariates': recal_count_covariates,
-    'default': local_realignment
+    'default': recal_count_covariates
 }
 
