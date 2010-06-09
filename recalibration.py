@@ -8,11 +8,12 @@ from utils import call, pmsg, unpaired_re, unpaired_strings
 
 
 GENOME_ANALYSIS_JAR = '/opt/GenomeAnalysisTK/GenomeAnalysisTK.jar'
+MEM = 'Xmx4g'
 
 CMD_DICT = {
     # commands
-    'gatk': 'java -Xmx4g -Djava.io.tmpdir=/tmp/$USER -jar ' + GENOME_ANALYSIS_JAR,
-    'picard': 'java -Xmx4g -jar /opt/picard-tools/',
+    'gatk': 'java -%s -Djava.io.tmpdir=/tmp/$USER -jar %s' % (MEM, GENOME_ANALYSIS_JAR),
+    'picard': 'java -%s -jar /opt/picard-tools/' % (MEM),
     'filterIndels': '/usr/local/bin/filterSingleSampleCalls.pl',
     'samtools': '/usr/local/bin/samtools',
     # data files
