@@ -6,14 +6,17 @@ from glob import glob
 from ruffus import follows, files, inputs, mkdir, regex, transform
 
 from zipper import zip
-from utils import call, paired_re, paired_strings, pmsg
+from utils import call, paired_re, paired_strings, pmsg, read_group_re
 
 cdict = {
     'bwa': '/usr/local/bin/bwa',
     'samtools': '/usr/local/bin/samtools',
+    'replace_header': 'java -Xmx4g -jar /opt/picard-tools/ReplaceSamHeader.jar',
     'ref': '../resources/human_g1k_v37.fasta',
     'threads': '4',
-    'sampl': '/usr/bin/perl /usr/local/bin/samtools.pl'
+    'sampl': '/usr/bin/perl /usr/local/bin/samtools.pl',
+    'header_template': './header.template',
+    'header_tmp': '/tmp/header-%(read_group)',
 }
 
 logger = logging.getLogger('main')
@@ -30,9 +33,9 @@ def copy_sequence_generator():
 def copy_sequences(input_file, output_file):
     """Copy sequence files from staging area on thumper1"""
     cmd_dict = cdict.copy()
-    cmd_dict['in_file'] = input_file
-    cmd_dict['out_file'] = output_file
-    pmsg('Sequence Copy', cmd_dict['in_file'], cmd_dict['out_file'])
+    cmd_dict['infile'] = input_file
+    cmd_dict['outfile'] = output_file
+    pmsg('Sequence Copy', cmd_dict['infile'], cmd_dict['outfile'])
     SeqIO.convert(input_file, 'fastq-illumina', output_file.strip('.gz'), 'fastq-sanger')
     zip(output_file)
 
@@ -48,10 +51,10 @@ def fastq_to_sai_generator():
 def fastq_to_sai(input_file, output_file):
     '''Convert FASTQ files to SAI files.'''
     cmd_dict = cdict.copy()
-    cmd_dict['in_file'] = input_file
-    cmd_dict['out_file'] = output_file
-    pmsg('FASTQ to SAI', cmd_dict['in_file'], cmd_dict['out_file'])
-    bwacmd = '%(bwa)s aln -t %(threads)s %(ref)s %(in_file)s > %(sai)s' % cmd_dict
+    cmd_dict['infile'] = input_file
+    cmd_dict['outfile'] = output_file
+    pmsg('FASTQ to SAI', cmd_dict['infile'], cmd_dict['outfile'])
+    bwacmd = '%(bwa)s aln -t %(threads)s %(ref)s %(infile)s > %(outfile)s' % cmd_dict
     call(bwacmd)
 
 # Merge paired ends to SAM
@@ -81,9 +84,9 @@ def paired_ends_to_sam(input_files, output_file):
     # sort input files
     input_files.sort(cmp=saicmp)
     # Run bwa to merge paired ends into SAM file
-    cmd_dict['in_files'] = ' '.join(input_files)
-    cmd_dict['out_file'] = output_file.strip('.gz')
-    cmdstr = '%(bwa)s sampe %(ref)s %(in_files)s > %(out_file)s' % cmd_dict
+    cmd_dict['infiles'] = ' '.join(input_files)
+    cmd_dict['outfile'] = output_file.strip('.gz')
+    cmdstr = '%(bwa)s sampe %(ref)s %(infiles)s > %(outfile)s' % cmd_dict
     call(cmdstr)
 
 ## Convert filtered SAM files to BAM files
@@ -93,11 +96,11 @@ def sam_to_bam(input_file, output_file):
     '''Convert SAM files to BAM files.'''
     cmd_dict = cdict.copy()
     cmd_dict['infile'] = input_file
-    cmd_dict['ofile'] = output_file
+    cmd_dict['outfile'] = output_file
     pmsg('SAM to BAM', cmd_dict['infile'], cmd_dict['ofile'])
-    samcmd = '%(samtools)s import %(ref)s.fai %(infile)s %(ofile)s' % cmd_dict
+    samcmd = '%(samtools)s import %(ref)s.fai %(infile)s %(outfile)s' % cmd_dict
     call(samcmd)
-    
+
 # Sort BAM file by name
 @follows(sam_to_bam, mkdir('namesorted_bam'))
 @transform(sam_to_bam, regex(r'^(.*)/bam/(.*).bam$'), r'\1/namesorted_bam/\2.namesorted.bam')
@@ -138,9 +141,26 @@ def sort_bam(input_file, output_file):
     samcmd = '%(samtools)s sort %(infile)s %(outprefix)s' % cmd_dict
     call(samcmd)
 
+# Update header with missing data
+@follows(sort_bam, mkdir('prepped_bam'))
+@transform(sort_bam, regex(r'^(.*)/sorted_bam/(.*).sorted.bam$'), r'\1/prepped_bam/\2.bam')
+def fix_header(input_file, output_file):
+    '''Fix header info'''
+    cmd_dict = cdict.copy()
+    cmd_dict['infile'] = input_file
+    cmd_dict['outfile'] = output_file
+    cmd_dict['read_group'] = os.path.split(output_file)[0]
+    cmd_dict.update(read_group_re.match(cmd_dict['read_group']).groupdict())
+    open(cmd_dict['header_tmp'] % cmd_dict, 'w').write(
+        open(cmd_dict['header_template'], 'r').read() % cmd_dict
+    )
+    picard_cmd = '%(replace_header) INPUT=%(infile)s HEADER=%(header_tmp)s OUTPUT=%(outfile)s'
+    call(picard_cmd % cmd_dict)
+    os.remove(cmd_dict['header_tmp'])
+
 # Create index from BAM - creates BAI files
-@follows(sort_bam)
-@transform(sort_bam, regex(r'^(.*).sorted.bam'), r'\1.sorted.bai')
+@follows(fix_header)
+@transform(fix_header, regex(r'^(.*)/prepped_bam/(.*).bam'), r'\1/prepped_bam/\2.bai')
 def bam_index(input_file, output_file):
     '''Index BAM file and create a BAI file.'''
     pmsg('Create BAM Index', input_file.strip('.gz'), output_file.strip('.gz'))
@@ -157,6 +177,7 @@ stages_dict = {
     'namesort_bam': namesort_bam,
     'fixmate_bam': fixmate_bam,
     'sort_bam': sort_bam,
+    'fix_header': fix_header,
     'index_bam': bam_index,
     'default': bam_index,
 }
