@@ -12,11 +12,12 @@ cdict = {
     'bwa': '/usr/local/bin/bwa',
     'samtools': '/usr/local/bin/samtools',
     'replace_header': 'java -Xmx4g -jar /opt/picard-tools/ReplaceSamHeader.jar',
-    'ref': '../resources/human_g1k_v37.fasta',
+    'sort_sam': 'java -Xmx4g -jar /opt/picard-tools/SortSam.jar',
+    'ref': '/usr/local/share/nextgen_resources/human_g1k_v37.fasta',
     'threads': '4',
     'sampl': '/usr/bin/perl /usr/local/bin/samtools.pl',
-    'header_template': './header.template',
-    'header_tmp': '/tmp/header-%(read_group)',
+    'header_template': '/usr/local/share/nextgen_resources/header.template',
+    'header_tmp': '/tmp/header-%(read_group)s',
 }
 
 logger = logging.getLogger('main')
@@ -60,7 +61,7 @@ def fastq_to_sai(input_file, output_file):
 # Merge paired ends to SAM
 @follows(fastq_to_sai, mkdir('sam'))
 @transform(fastq_to_sai,
-            regex(r'^(.+)/sai/([\d_]+)_s_(\d)_1.sai$'),
+            regex(r'^(.*)/sai/(\w+)_s_(\d)_1.sai$'),
             inputs([r'\1/sai/\2_s_\3_2.sai',
                    r'\1/sai/\2_s_\3_1.sai',
                    r'\1/fastq/\2_s_\3_1_sequence.fastq.gz',
@@ -97,7 +98,7 @@ def sam_to_bam(input_file, output_file):
     cmd_dict = cdict.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
-    pmsg('SAM to BAM', cmd_dict['infile'], cmd_dict['ofile'])
+    pmsg('SAM to BAM', cmd_dict['infile'], cmd_dict['outfile'])
     samcmd = '%(samtools)s import %(ref)s.fai %(infile)s %(outfile)s' % cmd_dict
     call(samcmd)
 
@@ -135,11 +136,12 @@ def sort_bam(input_file, output_file):
     '''Sort BAM files by coordinate.'''
     cmd_dict = cdict.copy()
     cmd_dict['infile'] = input_file
-    cmd_dict['outfile'] = os.path.splitext(output_file)[0]
-    cmd_dict['outprefix'] = cmd_dict['outfile']
+    cmd_dict['outfile'] = output_file
+    cmd_dict['outprefix'] = os.path.splitext(cmd_dict['outfile'])[0]
     pmsg('BAM Coord Sort', cmd_dict['infile'], cmd_dict['outfile'])
-    samcmd = '%(samtools)s sort %(infile)s %(outprefix)s' % cmd_dict
-    call(samcmd)
+    picard_cmd = '%(sort_sam)s INPUT=%(infile)s OUTPUT=%(outfile)s SORT_ORDER=coordinate ' + \
+            'MAX_RECORDS_IN_RAM=5000000'
+    call(picard_cmd % cmd_dict)
 
 # Update header with missing data
 @follows(sort_bam, mkdir('prepped_bam'))
@@ -149,23 +151,24 @@ def fix_header(input_file, output_file):
     cmd_dict = cdict.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
-    cmd_dict['read_group'] = os.path.split(output_file)[0]
+    cmd_dict['read_group'] = os.path.split(input_file)[1].rstrip('.sorted.bam')
     cmd_dict.update(read_group_re.match(cmd_dict['read_group']).groupdict())
-    open(cmd_dict['header_tmp'] % cmd_dict, 'w').write(
+    cmd_dict['header_tmp'] = cmd_dict['header_tmp'] % cmd_dict
+    open(cmd_dict['header_tmp'], 'w').write(
         open(cmd_dict['header_template'], 'r').read() % cmd_dict
     )
-    picard_cmd = '%(replace_header) INPUT=%(infile)s HEADER=%(header_tmp)s OUTPUT=%(outfile)s'
+    picard_cmd = '%(replace_header)s INPUT=%(infile)s HEADER=%(header_tmp)s OUTPUT=%(outfile)s'
     call(picard_cmd % cmd_dict)
     os.remove(cmd_dict['header_tmp'])
 
 # Create index from BAM - creates BAI files
 @follows(fix_header)
-@transform(fix_header, regex(r'^(.*)/prepped_bam/(.*).bam'), r'\1/prepped_bam/\2.bai')
+@transform(fix_header, regex(r'^(.*)/prepped_bam/(.*).bam'), r'\1/prepped_bam/\2.bam.bai')
 def bam_index(input_file, output_file):
     '''Index BAM file and create a BAI file.'''
-    pmsg('Create BAM Index', input_file.strip('.gz'), output_file.strip('.gz'))
+    pmsg('Create BAM Index', input_file, output_file)
     cmd_dict = cdict.copy()
-    cmd_dict['infile'] = input_file.strip('.gz')
+    cmd_dict['infile'] = input_file
     idxcmd = '%(samtools)s index %(infile)s' % cmd_dict
     call(idxcmd)
 
