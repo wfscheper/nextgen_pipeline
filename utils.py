@@ -3,7 +3,7 @@ import re
 import subprocess
 
 fastq_re = re.compile('fastq')
-paired_re = re.compile('(?P<line>[\d_]+)_s_(?P<lane>\d+)_(?P<pair>[12])(?P<rest>.*)')
+paired_re = re.compile('(?P<line>\w+)_s_(?P<lane>\d+)_(?P<pair>[12])(?P<rest>.*)')
 unpaired_re = re.compile('(?P<line>\w+)_s_(?P<lane>\d+)(?P<ext>.*)')
 
 paired_strings = {
