@@ -52,9 +52,9 @@ def fastq_to_sai(input_file, output_file):
 # Merge paired ends to SAM
 @follows(fastq_to_sai, mkdir('sam'))
 @transform(fastq_to_sai,
-            regex(r'^(.*)/sai/(\w+)_s_(\d)_1\.sai$'),
-            inputs([r'\1/sai/\2_s_\3_2.sai',
-                   r'\1/sai/\2_s_\3_1.sai',
+            regex(r'^(.*)/sai/(\w+)_s_(\d+)_1_sequence\.sai$'),
+            inputs([r'\1/sai/\2_s_\3_2_sequence.sai',
+                   r'\1/sai/\2_s_\3_1_sequence.sai',
                    r'\1/fastq/\2_s_\3_1_sequence.fastq.gz',
                    r'\1/fastq/\2_s_\3_2_sequence.fastq.gz']),
             r'\1/sam/\2_s_\3.sam')
