@@ -25,7 +25,7 @@ CMD_DICT = {
 # Calculate Covariates for Quality Score Recalibration
 def count_covariates_generator():
     cwd = os.getcwd()
-    for file in glob('%s/sorted_bam/*.bam' % cwd):
+    for file in glob('%s/prepped_bam/*.bam' % cwd):
         filename = '%s/recal_data/%s' % (cwd, unpaired_strings['recal_data'] % \
                 unpaired_re.search(file).groupdict())
         yield [file, filename]
@@ -47,17 +47,17 @@ def sorted_count_covariates(input_file, output_file):
 
 # Apply Quality Score Recalibration
 @follows(sorted_count_covariates, mkdir('recal_bam'))
-@transform(sorted_count_covariates, regex(r'^(.*)/recal_data/(.*).sorted.csv$'),
-        inputs([r'\1/recal_data/\2.sorted.csv', r'\1/sorted_bam/\2.sorted.bam']),
+@transform(sorted_count_covariates, regex(r'^(.*)/recal_data/(.*).original.csv$'),
+        inputs([r'\1/recal_data/\2.original.csv', r'\1/prepped_bam/\2.bam']),
         r'\1/recal_bam/\2.recalibrated.bam')
 def recalibrate_quality_scores(input_files, output_file):
     '''Apply Recalibrated QSs to BAM file'''
     cmd_dict = CMD_DICT.copy()
     cmd_dict['recal_data'] = input_files[0]
-    cmd_dict['sorted_bam'] = input_files[1]
+    cmd_dict['bam'] = input_files[1]
     cmd_dict['outfile'] = output_file
     pmsg('Table Recalibration', ', '.join(input_files), output_file)
-    gatk_cmd = '%(gatk)s -T TableRecalibration -R %(genome)s -I %(sorted_bam)s ' + \
+    gatk_cmd = '%(gatk)s -T TableRecalibration -R %(genome)s -I %(bam)s ' + \
             '-recalFile %(recal_data)s -outputBam %(outfile)s -dP illumina'
     call(gatk_cmd % cmd_dict)
     samtools_cmd = '%(samtools)s index %(outfile)s'
