@@ -18,6 +18,24 @@ unpaired_strings = {
     'recal_data': '%(line)s_s_%(lane)s.original.csv',
 }
 
+CMD_DICT = {
+    'threads': '4',
+    # commands
+    'bwa': '/usr/local/bin/bwa',
+    'gatk': 'java -%s -Djava.io.tmpdir=/tmp/$USER -jar %s' % (MEM, GENOME_ANALYSIS_JAR),
+    'filterIndels': '/usr/local/bin/filterSingleSampleCalls.pl',
+    'picard': '/usr/local/bin/picard.sh',
+    'sampl': '/usr/bin/perl /usr/local/bin/samtools.pl',
+    'samtools': '/usr/local/bin/samtools',
+    # data files
+    'exome': '../resources/hg19_capture.interval_list',
+    'genome': '../resources/human_g1k_v37.fasta',
+    'dbsnp': '../resources/dbsnp_130_b37.rod',
+    'header_template': '../resources/header.template',
+    'header_tmp': '/tmp/header-%(read_group)s',
+}
+
+
 logger = logging.getLogger('main')
 
 def log_info(func):

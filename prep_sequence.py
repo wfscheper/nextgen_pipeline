@@ -8,17 +8,6 @@ from ruffus import follows, files, inputs, mkdir, regex, transform
 from zipper import zip
 from utils import call, paired_re, paired_strings, pmsg, read_group_re
 
-cdict = {
-    'bwa': '/usr/local/bin/bwa',
-    'samtools': '/usr/local/bin/samtools',
-    'picard': '/usr/local/bin/picard.sh',
-    'ref': '../resources/human_g1k_v37.fasta',
-    'threads': '4',
-    'sampl': '/usr/bin/perl /usr/local/bin/samtools.pl',
-    'header_template': '/usr/local/share/nextgen_resources/header.template',
-    'header_tmp': '/tmp/header-%(read_group)s',
-}
-
 logger = logging.getLogger('main')
 
 # Copy sequence from staging area
@@ -32,7 +21,7 @@ def copy_sequence_generator():
 @files(copy_sequence_generator)
 def copy_sequences(input_file, output_file):
     """Copy sequence files from staging area on thumper1"""
-    cmd_dict = cdict.copy()
+    cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('Sequence Copy', cmd_dict['infile'], cmd_dict['outfile'])
@@ -52,11 +41,11 @@ def fastq_to_sai_generator():
 @transform(copy_sequences, regex(r'^(.*)/fastq/(.*)\.fastq\.gz$'), r'\1/sai/\2.sai')
 def fastq_to_sai(input_file, output_file):
     '''Convert FASTQ files to SAI files.'''
-    cmd_dict = cdict.copy()
+    cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('FASTQ to SAI', cmd_dict['infile'], cmd_dict['outfile'])
-    bwacmd = '%(bwa)s aln -t %(threads)s %(ref)s %(infile)s > %(outfile)s'
+    bwacmd = '%(bwa)s aln -t %(threads)s %(genome)s %(infile)s > %(outfile)s'
     call(bwacmd % cmd_dict)
 
 # Merge paired ends to SAM
@@ -80,7 +69,7 @@ def paired_ends_to_sam(input_files, output_file):
         else:
             return cmp(x,y)
 
-    cmd_dict = cdict.copy()
+    cmd_dict = CMD_DICT.copy()
     assert type(input_files) is type([])
     pmsg('SAM generation', ', '.join(input_files), output_file.strip('.gz'))
     # sort input files
@@ -88,7 +77,7 @@ def paired_ends_to_sam(input_files, output_file):
     # Run bwa to merge paired ends into SAM file
     cmd_dict['infiles'] = ' '.join(input_files)
     cmd_dict['outfile'] = output_file.strip('.gz')
-    bwa_cmd = '%(bwa)s sampe %(ref)s %(infiles)s > %(outfile)s'
+    bwa_cmd = '%(bwa)s sampe %(genome)s %(infiles)s > %(outfile)s'
     call(bwa_cmd % cmd_dict)
 
 ## Convert filtered SAM files to BAM files
@@ -96,11 +85,11 @@ def paired_ends_to_sam(input_files, output_file):
 @transform(paired_ends_to_sam, regex(r'^(.*)/sam/(.*)\.sam$'), r'\1/bam/\2.bam')
 def sam_to_bam(input_file, output_file):
     '''Convert SAM files to BAM files.'''
-    cmd_dict = cdict.copy()
+    cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('SAM to BAM', cmd_dict['infile'], cmd_dict['outfile'])
-    sam_cmd = '%(samtools)s import %(ref)s.fai %(infile)s %(outfile)s'
+    sam_cmd = '%(samtools)s import %(genome)s.fai %(infile)s %(outfile)s'
     call(sam_cmd % cmd_dict)
 
 # Remove duplicates
@@ -108,7 +97,7 @@ def sam_to_bam(input_file, output_file):
 @transform(sam_to_bam, regex(r'^(.*)/bam/(.*)\.bam$'), r'\1/deduped_bam/\2.deduped.bam')
 def remove_duplicates(input_file, output_file):
     '''Remove duplicates from BAM file'''
-    cmd_dict = cdict.copy()
+    cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('Remove duplicates', input_file, output_file)
@@ -121,7 +110,7 @@ def remove_duplicates(input_file, output_file):
         r'\1/namesorted_bam/\2.namesorted.bam')
 def namesort_bam(input_file, output_file):
     '''Sort BAM files by name.'''
-    cmd_dict = cdict.copy()
+    cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     cmd_dict['outprefix'] = os.path.splitext(output_file)[0]
@@ -135,7 +124,7 @@ def namesort_bam(input_file, output_file):
         r'\1/fixmate_bam/\2.fixmate.bam')
 def fixmate_bam(input_file, output_file):
     '''Fix mate info in BAM file.'''
-    cmd_dict = cdict.copy()
+    cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('Fix Mate Info', cmd_dict['infile'], cmd_dict['outfile'])
@@ -148,7 +137,7 @@ def fixmate_bam(input_file, output_file):
         r'\1/sorted_bam/\2.sorted.bam')
 def sort_bam(input_file, output_file):
     '''Sort BAM files by coordinate.'''
-    cmd_dict = cdict.copy()
+    cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     cmd_dict['outprefix'] = os.path.splitext(cmd_dict['outfile'])[0]
@@ -162,7 +151,7 @@ def sort_bam(input_file, output_file):
 @transform(sort_bam, regex(r'^(.*)/sorted_bam/(.*)\.sorted\.bam$'), r'\1/prepped_bam/\2.bam')
 def fix_header(input_file, output_file):
     '''Fix header info'''
-    cmd_dict = cdict.copy()
+    cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     cmd_dict['read_group'] = os.path.split(input_file)[1].rstrip('.sorted.bam')
@@ -182,7 +171,7 @@ def fix_header(input_file, output_file):
 def bam_index(input_file, output_file):
     '''Index BAM file and create a BAI file.'''
     pmsg('Create BAM Index', input_file, output_file)
-    cmd_dict = cdict.copy()
+    cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     sam_cmd = '%(samtools)s index %(infile)s'
     call(sam_cmd % cmd_dict)

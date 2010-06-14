@@ -1,26 +1,13 @@
-import re
 import os
 
 from glob import glob
 from ruffus import files, follows, inputs, mkdir, regex, transform
 
-from utils import call, pmsg, unpaired_re, unpaired_strings
+from utils import call, pmsg, unpaired_re, unpaired_strings, CMD_DICT
 
 
 GENOME_ANALYSIS_JAR = '/opt/GenomeAnalysisTK/GenomeAnalysisTK.jar'
 MEM = 'Xmx4g'
-
-CMD_DICT = {
-    # commands
-    'gatk': 'java -%s -Djava.io.tmpdir=/tmp/$USER -jar %s' % (MEM, GENOME_ANALYSIS_JAR),
-    'picard': 'java -%s -jar /opt/picard-tools/' % (MEM),
-    'filterIndels': '/usr/local/bin/filterSingleSampleCalls.pl',
-    'samtools': '/usr/local/bin/samtools',
-    # data files
-    'exome': '/usr/local/share/nextgen_resources/hg19_capture.interval_list',
-    'genome': '/usr/local/share/nextgen_resources/human_g1k_v37.fasta',
-    'dbsnp': '/usr/local/share/nextgen_resources/dbsnp_130_b37.rod',
-}
 
 # Calculate Covariates for Quality Score Recalibration
 def count_covariates_generator():
