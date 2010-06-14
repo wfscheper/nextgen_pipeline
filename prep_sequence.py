@@ -6,7 +6,7 @@ from glob import glob
 from ruffus import follows, files, inputs, mkdir, regex, transform
 
 from zipper import zip
-from utils import call, paired_re, paired_strings, pmsg, read_group_re
+from utils import call, paired_re, paired_strings, pmsg, read_group_re, CMD_DICT
 
 logger = logging.getLogger('main')
 
@@ -15,7 +15,7 @@ def copy_sequence_generator():
     cwd = os.getcwd()
     for file in glob('/media/thumper1/nextgen/staging_area/*_sequence.txt'):
         filename = paired_strings['sequence'] % paired_re.search(file).groupdict()
-        yield [file, '%s/fastq/%s.fastq.gz' % (cwd, filename.strip('.txt'))]
+        yield [file, '%s/fastq/%s.fastq.gz' % (cwd, filename.rstrip('.txt'))]
 
 @follows(mkdir('fastq'))
 @files(copy_sequence_generator)
@@ -24,10 +24,11 @@ def copy_sequences(input_file, output_file):
     cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
-    pmsg('Sequence Copy', cmd_dict['infile'], cmd_dict['outfile'])
-    SeqIO.convert(input_file, 'fastq-illumina', output_file.strip('.gz'), 'fastq-sanger')
-    if 'fastq.gz' not in output_file:
-        zip(output_file)
+    cmd_dict['outfile_prefix'] = output_file.rstrip('.gz')
+    pmsg('Sequence Copy', input_file, cmd_dict['outfile_prefix'])
+    SeqIO.convert(cmd_dict['infile'], 'fastq-illumina', cmd_dict['outfile_prefix'], 'fastq-sanger')
+    pmsg('Compressing file', cmd_dict['outfile_prefix'], cmd_dict['outfile'])
+    zip(cmd_dict['outfile_prefix'])
 
 # Convert fastq to sai
 def fastq_to_sai_generator():
