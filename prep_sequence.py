@@ -102,7 +102,7 @@ def remove_duplicates(input_file, output_file):
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('Remove duplicates', input_file, output_file)
-    picard_cmd = '%(picard)s MarkDupilcates I=%(infile)s O=%(outfile)s REMOVE_DUPLICATES=true'
+    picard_cmd = '%(picard)s MarkDuplicates I=%(infile)s O=%(outfile)s REMOVE_DUPLICATES=true'
     call(picard_cmd % cmd_dict)
 
 # Sort BAM file by name
