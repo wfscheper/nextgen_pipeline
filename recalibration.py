@@ -6,9 +6,6 @@ from ruffus import files, follows, inputs, mkdir, regex, transform
 from utils import call, pmsg, unpaired_re, unpaired_strings, CMD_DICT
 
 
-GENOME_ANALYSIS_JAR = '/opt/GenomeAnalysisTK/GenomeAnalysisTK.jar'
-MEM = 'Xmx4g'
-
 # Calculate Covariates for Quality Score Recalibration
 def count_covariates_generator():
     cwd = os.getcwd()

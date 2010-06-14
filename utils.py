@@ -18,6 +18,9 @@ unpaired_strings = {
     'recal_data': '%(line)s_s_%(lane)s.original.csv',
 }
 
+GENOME_ANALYSIS_JAR = '/opt/GenomeAnalysisTK/GenomeAnalysisTK.jar'
+MEM = 'Xmx4g'
+
 CMD_DICT = {
     'threads': '4',
     # commands
