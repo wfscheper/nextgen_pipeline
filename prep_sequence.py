@@ -93,22 +93,9 @@ def sam_to_bam(input_file, output_file):
     sam_cmd = '%(samtools)s import %(genome)s.fai %(infile)s %(outfile)s'
     call(sam_cmd % cmd_dict)
 
-# Remove duplicates
-@follows(sam_to_bam, mkdir('deduped'))
-@transform(sam_to_bam, regex(r'^(.*)/bam/(.*)\.bam$'), r'\1/deduped_bam/\2.deduped.bam')
-def remove_duplicates(input_file, output_file):
-    '''Remove duplicates from BAM file'''
-    cmd_dict = CMD_DICT.copy()
-    cmd_dict['infile'] = input_file
-    cmd_dict['outfile'] = output_file
-    pmsg('Remove duplicates', input_file, output_file)
-    picard_cmd = '%(picard)s MarkDuplicates I=%(infile)s O=%(outfile)s REMOVE_DUPLICATES=true'
-    call(picard_cmd % cmd_dict)
-
 # Sort BAM file by name
-@follows(remove_duplicates, mkdir('namesorted_bam'))
-@transform(remove_duplicates, regex(r'^(.*)/deduped_bam/(.*)\.deduped\.bam$'),
-        r'\1/namesorted_bam/\2.namesorted.bam')
+@follows(sam_to_bam, mkdir('namesorted_bam'))
+@transform(sam_to_bam, regex(r'^(.*)/bam/(.*)\.bam$'), r'\1/namesorted_bam/\2.namesorted.bam')
 def namesort_bam(input_file, output_file):
     '''Sort BAM files by name.'''
     cmd_dict = CMD_DICT.copy()
@@ -147,15 +134,30 @@ def sort_bam(input_file, output_file):
             'SORT_ORDER=coordinate MAX_RECORDS_IN_RAM=5000000'
     call(picard_cmd % cmd_dict)
 
+# Remove duplicates
+@follows(sort_bam, mkdir('deduped_bam'))
+@transform(sort_bam, regex(r'^(.*)/sorted_bam/(.*)\.sorted\.bam$'),
+        r'\1/deduped_bam/\2.deduped.bam')
+def remove_duplicates(input_file, output_file):
+    '''Remove duplicates from BAM file'''
+    cmd_dict = CMD_DICT.copy()
+    cmd_dict['infile'] = input_file
+    cmd_dict['outfile'] = output_file
+    cmd_dict['metrics'] = output_file.rstrip('bam') + 'metrics'
+    pmsg('Remove duplicates', input_file, output_file)
+    picard_cmd = '%(picard)s MarkDuplicates I=%(infile)s O=%(outfile)s M=%(metrics)s ' + \
+            'REMOVE_DUPLICATES=true'
+    call(picard_cmd % cmd_dict)
+
 # Update header with missing data
-@follows(sort_bam, mkdir('prepped_bam'))
-@transform(sort_bam, regex(r'^(.*)/sorted_bam/(.*)\.sorted\.bam$'), r'\1/prepped_bam/\2.bam')
+@follows(remove_duplicates, mkdir('prepped_bam'))
+@transform(remove_duplicates, regex(r'^(.*)/deduped_bam/(.*)\.deduped\.bam$'), r'\1/prepped_bam/\2.prepped.bam')
 def fix_header(input_file, output_file):
     '''Fix header info'''
     cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
-    cmd_dict['read_group'] = os.path.split(input_file)[1].rstrip('.sorted.bam')
+    cmd_dict['read_group'] = os.path.split(input_file)[1].rstrip('.deduped.bam')
     cmd_dict.update(read_group_re.match(cmd_dict['read_group']).groupdict())
     cmd_dict['header_tmp'] = cmd_dict['header_tmp'] % cmd_dict
     open(cmd_dict['header_tmp'], 'w').write(
