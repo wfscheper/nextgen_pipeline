@@ -15,7 +15,7 @@ paired_strings = {
 unpaired_strings = {
     'sam': '%(line)s_s_%(lane)s.sam',
     'bam': '%(line)s_s_%(lane)s.bam',
-    'recal_data': '%(line)s_s_%(lane)s.original.csv',
+    'recal_data': '%(line)s_s_%(lane)s.prepped.csv',
 }
 
 GENOME_ANALYSIS_JAR = '/opt/GenomeAnalysisTK/GenomeAnalysisTK.jar'

@@ -31,8 +31,8 @@ def sorted_count_covariates(input_file, output_file):
 
 # Apply Quality Score Recalibration
 @follows(sorted_count_covariates, mkdir('recal_bam'))
-@transform(sorted_count_covariates, regex(r'^(.*)/recal_data/(.*).original.csv$'),
-        inputs([r'\1/recal_data/\2.original.csv', r'\1/prepped_bam/\2.bam']),
+@transform(sorted_count_covariates, regex(r'^(.*)/recal_data/(.*).prepped.csv$'),
+        inputs([r'\1/recal_data/\2.prepped.csv', r'\1/prepped_bam/\2.prepped.bam']),
         r'\1/recal_bam/\2.recalibrated.bam')
 def recalibrate_quality_scores(input_files, output_file):
     '''Apply Recalibrated QSs to BAM file'''
