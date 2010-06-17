@@ -7,7 +7,7 @@ pigz = '/usr/local/bin/pigz'
 
 def zip(*files, **kwargs):
     default = {
-        'threads': 2
+        'threads': 4
     }
     default.update(kwargs)
     for file in files:
@@ -16,7 +16,7 @@ def zip(*files, **kwargs):
 
 def unzip(*files, **kwargs):
     default = {
-        'threads': 2
+        'threads': 4
     }
     default.update(kwargs)
     for file in files:

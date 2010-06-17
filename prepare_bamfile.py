@@ -19,6 +19,7 @@ def copy_sequence_generator():
 
 @follows(mkdir('fastq'))
 @files(copy_sequence_generator)
+@jobs_limit(2)
 def copy_sequences(input_file, output_file):
     """Copy sequence files from staging area on thumper1"""
     cmd_dict = CMD_DICT.copy()
@@ -37,6 +38,7 @@ def fastq_to_sai_generator():
         filename = '%s/sai/%s' % (cwd, paired_strings['sai'] % paired_re.search(file).groupdict())
         yield [file, filename]
 
+@jobs_limit(2)
 @follows(copy_sequences, mkdir('sai'))
 #@files(fastq_to_sai_generator)
 @transform(copy_sequences, regex(r'^(.*)/fastq/(.*)\.fastq\.gz$'), r'\1/sai/\2.sai')
