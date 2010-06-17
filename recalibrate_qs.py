@@ -19,8 +19,13 @@ def count_covariates(input_file, output_file):
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('Count Covariates', cmd_dict['infile'], cmd_dict['outfile'])
-    gatk_cmd = '%(gatk)s -T CountCovariates -R %(genome)s -D %(dbsnp)s -standard ' + \
-            '-I %(infile)s -recalFile %(outfile)s -dP illumina'
+    gatk_cmd = '%(gatk)s ' + \
+            '-T CountCovariates ' + \
+            '-R %(genome)s ' + \
+            '-D %(dbsnp)s ' + \
+            '-I %(infile)s ' + \
+            '-recalFile %(outfile)s ' + \
+            '-standard '
     call(gatk_cmd % cmd_dict)
 
 @follows(mkdir('recal_data'))
@@ -41,8 +46,12 @@ def recalibrate_quality_scores(input_files, output_file):
     cmd_dict['bam'] = input_files[1]
     cmd_dict['outfile'] = output_file
     pmsg('Table Recalibration', ', '.join(input_files), output_file)
-    gatk_cmd = '%(gatk)s -T TableRecalibration -R %(genome)s -I %(bam)s ' + \
-            '-recalFile %(recal_data)s -outputBam %(outfile)s -dP illumina'
+    gatk_cmd = '%(gatk)s ' + \
+            '-T TableRecalibration ' + \
+            '-R %(genome)s ' + \
+            '-I %(bam)s ' + \
+            '-recalFile %(recal_data)s ' + \
+            '-outputBam %(outfile)s'
     call(gatk_cmd % cmd_dict)
     samtools_cmd = '%(samtools)s index %(outfile)s'
     call(samtools_cmd % cmd_dict)
