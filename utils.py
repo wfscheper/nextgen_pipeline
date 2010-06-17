@@ -16,6 +16,7 @@ unpaired_strings = {
     'sam': '%(line)s_s_%(lane)s.sam',
     'bam': '%(line)s_s_%(lane)s.bam',
     'recal_data': '%(line)s_s_%(lane)s.prepped.csv',
+    'intervals': '%(line)s_s_%(lane)s.intervals',
 }
 
 GENOME_ANALYSIS_JAR = '/opt/GenomeAnalysisTK/GenomeAnalysisTK.jar'
@@ -25,8 +26,9 @@ CMD_DICT = {
     'threads': '4',
     # commands
     'bwa': '/usr/local/bin/bwa',
-    'gatk': 'java -%s -Djava.io.tmpdir=/tmp/$USER -jar %s' % (MEM, GENOME_ANALYSIS_JAR),
     'filterIndels': '/usr/local/bin/filterSingleSampleCalls.pl',
+    'gatk': 'java -%s -Djava.io.tmpdir=/tmp/$USER -jar %s' % (MEM, GENOME_ANALYSIS_JAR),
+    'makeIndelMask': '/usr/local/bin/makeIndelMask.py',
     'picard': '/usr/local/bin/picard.sh',
     'sampl': '/usr/bin/perl /usr/local/bin/samtools.pl',
     'samtools': '/usr/local/bin/samtools',
@@ -36,6 +38,10 @@ CMD_DICT = {
     'dbsnp': '../resources/dbsnp_130_b37.rod',
     'header_template': '../resources/header.template',
     'header_tmp': '/tmp/header-%(read_group)s',
+    # filters
+    'standard_filter': '\"QUAL < 30.0 || AB > 0.75 && DP > 40 || QD < 5.0 || HRun > 5 || ' + \
+        'SB > -0.10\"',
+    'hard_to_validate_filter': '\"MQ0 >= 4 && ((MQ0 / (1.0 * DP)) > 0.1)\"',
 }
 
 
