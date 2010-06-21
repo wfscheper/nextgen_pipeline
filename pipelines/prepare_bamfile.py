@@ -1,3 +1,10 @@
+'''
+Prepares bam files from staged sequence.txt files
+
+Required for any pipelines that use the Genome Analysis Toolkit.
+
+Currnetly, this means quality score recalibration and variant calling.
+'''
 import os
 import logging
 from Bio import SeqIO

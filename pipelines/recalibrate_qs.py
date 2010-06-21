@@ -1,3 +1,11 @@
+'''
+Recalibrates quality scores and generates data needed for checking what effect
+recalibration had on quality scores. 
+
+Depends on a properly aligned, sorted and indexed bam file.
+
+Required for depth of coverage and variant calling.
+'''
 import os
 
 from glob import iglob as glob

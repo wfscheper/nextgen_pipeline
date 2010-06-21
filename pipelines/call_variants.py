@@ -1,3 +1,9 @@
+'''
+Pipeline for calling variants.
+
+Depends on recalibration of quality scores being successfully run, and
+generating an indexed, recalibrated bam file.
+'''
 import re
 import os
 

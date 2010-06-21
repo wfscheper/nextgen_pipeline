@@ -49,6 +49,7 @@ if __name__ == '__main__':
     pipeline_stages = {}
     (options, args) = parser.parse_args()
     
+    # get number of cpus on machine
     ncpus = multiprocessing.cpu_count()
 
     # load the pipeline request by the user
@@ -60,19 +61,24 @@ if __name__ == '__main__':
         show_pipeline_help()
     pipeline_stages.update({options.pipeline: pipeline.stages_dict})
 
+    # did the user specify a stage
     if options.stage:
         if options.stage not in pipeline_stages[options.pipeline].keys():
+            # missing or non-existant stage chosen
             show_pipeline_stage_help()
         else:
             start_stage = pipeline_stages[options.pipeline][options.stage]
     else:
+        # user did not specify a stage, use default
         start_stage = pipeline_stages[options.pipeline]['default']
     
+    # user specified thread count, capped at the number of cpus
     if options.threads:
         NUM_JOBS = options.threads if options.threads <= ncpus else ncpus
     else:
         NUM_JOBS = ncpus/2
 
+    # user speicified log file
     if options.log:
         (head, tail) = os.path.split(options.log)
         if os.path.exists(head):
@@ -90,6 +96,7 @@ if __name__ == '__main__':
 
     logger.debug('pipeline_run: %d jobs' % NUM_JOBS)
 
+    # user said to force running of stage
     if options.force_run:
         pipeline_run([start_stage], forcedtorun_tasks=[start_stage], multiprocess=NUM_JOBS,
                 logger=logger)
