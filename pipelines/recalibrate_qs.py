@@ -1,6 +1,6 @@
 import os
 
-from glob import glob
+from glob import iglob as glob
 from ruffus import files, follows, inputs, mkdir, regex, transform
 
 from utils import call, pmsg, unpaired_re, unpaired_strings, CMD_DICT

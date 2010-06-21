@@ -5,6 +5,7 @@ import os
 import sys
 import multiprocessing
 
+from glob import iglob as glob
 from optparse import OptionParser
 
 from log import quick_start_log

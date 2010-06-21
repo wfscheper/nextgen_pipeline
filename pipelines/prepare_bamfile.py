@@ -1,7 +1,7 @@
 import os
 import logging
 from Bio import SeqIO
-from glob import glob
+from glob import iglob as glob
 
 from ruffus import follows, files, inputs, jobs_limit, mkdir, regex, transform
 
