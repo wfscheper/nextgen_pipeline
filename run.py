@@ -10,6 +10,7 @@ from optparse import OptionParser
 from log import quick_start_log
 from ruffus import pipeline_run
 
+
 def show_pipeline_stage_help():
     print "The pipeline stage you selected does not exist."
     print "Please choose one of the following options (* default stage):"

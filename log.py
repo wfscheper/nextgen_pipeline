@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 
+
 def quick_start_log(log_fn=None, mode=None, level=logging.DEBUG, \
                     format='%(asctime)s|%(name)s|%(levelname)s| %(message)s'):
     '''

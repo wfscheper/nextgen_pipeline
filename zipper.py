@@ -1,6 +1,7 @@
 import logging
 import subprocess
 
+
 logger = logging.getLogger('main')
 
 pigz = '/usr/local/bin/pigz'
