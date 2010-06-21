@@ -2,23 +2,10 @@ import logging
 import re
 import subprocess
 
-fastq_re = re.compile('fastq')
-paired_re = re.compile(r'(?P<line>\w+)_s_(?P<lane>\d+)_(?P<pair>[12])(?P<rest>.*)')
-unpaired_re = re.compile(r'(?P<line>\w+)_s_(?P<lane>\d+)(?P<ext>.*)')
-read_group_re = re.compile(r'^(?P<sample>[a-zA-Z0-9]+)_(?P<run_barcode>[a-zA-Z0-9]+)(_\d+)?_s_(?P<lane>\d+)$')
+from run import DEBUG
 
-paired_strings = {
-    'sequence': '%(line)s_s_%(lane)s_%(pair)s_sequence.txt',
-    'fastq': '%(line)s_s_%(lane)s_%(pair)s_sequence.fastq',
-    'sai': '%(line)s_s_%(lane)s_%(pair)s.sai',
-}
-unpaired_strings = {
-    'sam': '%(line)s_s_%(lane)s.sam',
-    'bam': '%(line)s_s_%(lane)s.bam',
-    'recal_data': '%(line)s_s_%(lane)s.prepped.csv',
-    'intervals': '%(line)s_s_%(lane)s.intervals',
-}
 
+DEBUG_COMMAND = 'touch %(outfile)s'
 GENOME_ANALYSIS_JAR = '/opt/GenomeAnalysisTK/GenomeAnalysisTK.jar'
 MEM = 'Xmx4g'
 
@@ -44,6 +31,22 @@ CMD_DICT = {
     'hard_to_validate_filter': '\"MQ0 >= 4 && ((MQ0 / (1.0 * DP)) > 0.1)\"',
 }
 
+#fastq_re = re.compile('fastq')
+paired_re = re.compile(r'(?P<line>\w+)_s_(?P<lane>\d+)_(?P<pair>[12])(?P<rest>.*)')
+unpaired_re = re.compile(r'(?P<line>\w+)_s_(?P<lane>\d+)(?P<ext>.*)')
+read_group_re = re.compile(r'^(?P<sample>[a-zA-Z0-9]+)_(?P<run_barcode>[a-zA-Z0-9]+)(_\d+)?_s_(?P<lane>\d+)$')
+
+paired_strings = {
+    'sequence': '%(line)s_s_%(lane)s_%(pair)s_sequence.txt',
+    'fastq': '%(line)s_s_%(lane)s_%(pair)s_sequence.fastq',
+    'sai': '%(line)s_s_%(lane)s_%(pair)s.sai',
+}
+unpaired_strings = {
+    'sam': '%(line)s_s_%(lane)s.sam',
+    'bam': '%(line)s_s_%(lane)s.bam',
+    'recal_data': '%(line)s_s_%(lane)s.prepped.csv',
+    'intervals': '%(line)s_s_%(lane)s.intervals',
+}
 
 logger = logging.getLogger('main')
 
@@ -66,6 +69,9 @@ def pmsg(msg, input, output):
     }
     print 'Running %(msg)s with input %(in)s and output %(out)s' % msgs
 
-def call(cmdline):
-    logger.debug('Calling command line: %s' % cmdline)
-    subprocess.call(cmdline, shell=True)
+def call(command, command_dict):
+    command_line = command % command_dict
+    logger.debug('Calling command line: %s' % command_line)
+    if DEBUG: command_line = DEBUG_COMMAND % command_dict
+    subprocess.call(command_line, shell=True)
+

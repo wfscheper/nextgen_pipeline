@@ -26,7 +26,7 @@ def count_covariates(input_file, output_file):
             '-I %(infile)s ' + \
             '-recalFile %(outfile)s ' + \
             '-standard '
-    call(gatk_cmd % cmd_dict)
+    call(gatk_cmd, cmd_dict)
 
 @follows(mkdir('recal_data'))
 @files(count_covariates_generator)
@@ -52,9 +52,9 @@ def recalibrate_quality_scores(input_files, output_file):
             '-I %(bam)s ' + \
             '-recalFile %(recal_data)s ' + \
             '-outputBam %(outfile)s'
-    call(gatk_cmd % cmd_dict)
+    call(gatk_cmd, cmd_dict)
     samtools_cmd = '%(samtools)s index %(outfile)s'
-    call(samtools_cmd % cmd_dict)
+    call(samtools_cmd, cmd_dict)
 
 # Generate QS Recalibration Covariates
 @follows(recalibrate_quality_scores)

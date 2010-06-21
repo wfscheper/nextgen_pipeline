@@ -29,7 +29,7 @@ def create_intervals(input_file, output_file):
             '-D %(dbsnp)s ' + \
             '-I %(infile)s ' + \
             '-o %(outfile)s'
-    call(gatk_cmd % cmd_dict)
+    call(gatk_cmd, cmd_dict)
 
 # Realign around possible indels
 @follows(create_intervals, mkdir('cleaned_bam'))
@@ -51,9 +51,9 @@ def local_realignment(input_files, output_file):
             '-targetIntervals %(indel_intervals)s ' + \
             '-mrl 20000 ' + \
             '--output %(outfile)s'
-    call(gatk_cmd % cmd_dict)
+    call(gatk_cmd, cmd_dict)
     samtools_cmd = '%(samtools)s index %(outfile)s'
-    call(samtools_cmd % cmd_dict)
+    call(samtools_cmd, cmd_dict)
 
 # Call Indels
 @follows(local_realignment, mkdir('indels'))
@@ -65,16 +65,16 @@ def indel_genotyping(input_file, details_file, raw_file):
     cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['detailsfile'] = details_file
-    cmd_dict['rawfile'] = raw_file
+    cmd_dict['outfile'] = raw_file
     pmsg('Indel Genotyping', input_file, ', '.join([details_file, raw_file]))
     gatk_cmd = '%(gatk)s ' + \
             '-T IndelGenotyperV2 ' + \
             '-R %(genome)s ' + \
             '-I %(infile)s ' + \
-            '-O %(rawfile)s ' + \
+            '-O %(outfile)s ' + \
             '-o %(detailsfile)s ' + \
             '--verbose'
-    call(gatk_cmd % cmd_dict)
+    call(gatk_cmd, cmd_dict)
 
 # Filter Indels
 @follows(indel_genotyping, mkdir('filtered_calls'))
@@ -92,7 +92,7 @@ def filter_indels(input_file, output_file):
             '--max_cons_nqs_av_mm 0.5 ' + \
             '--mode ANNOTATE ' + \
             '> %(outfile)s'
-    call(filter_cmd % cmd_dict)
+    call(filter_cmd, cmd_dict)
 
 # Call SNPs
 @follows(local_realignment, mkdir('snps'))
@@ -112,7 +112,7 @@ def snp_genotyping(input_file, output_file):
             '-I %(infile)s ' + \
             '-varout %(outfile)s ' + \
             '-stand_call_conf 30.0'
-    call(gatk_cmd % cmd_dict)
+    call(gatk_cmd, cmd_dict)
 
 # Create InDel mask
 @follows(indel_genotyping)
@@ -129,7 +129,7 @@ def create_indel_mask(input_file, output_file):
             '%(infile)s ' + \
             '10 ' + \
             '%(outfile)s'
-    call(python_cmd % cmd_dict)
+    call(python_cmd, cmd_dict)
 
 # Filter SNPs
 @follows(snp_genotyping, create_indel_mask, mkdir('filtered_calls'))
@@ -156,7 +156,7 @@ def filter_snps(input_files, output_file):
             '--filterName \"StandardFilter\" ' + \
             '--filterExpression %(hard_to_validate_filter)s ' + \
             '--filterName \"HardToValidateFilter\" '
-    call(gatk_cmd % cmd_dict)
+    call(gatk_cmd, cmd_dict)
 
 stages_dict = {
     'create_intervals': create_intervals,

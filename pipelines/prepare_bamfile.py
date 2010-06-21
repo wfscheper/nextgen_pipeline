@@ -12,7 +12,7 @@ from utils import call, paired_re, paired_strings, pmsg, read_group_re, CMD_DICT
 # Copy sequence from staging area
 def copy_sequence_generator():
     cwd = os.getcwd()
-    for file in glob('/media/thumper1/nextgen/staging_area/*_sequence.txt'):
+    for file in glob('../staging_area/*_sequence.txt'):
         filename = paired_strings['sequence'] % paired_re.search(file).groupdict()
         yield [file, '%s/fastq/%s.fastq.gz' % (cwd, filename.rstrip('.txt'))]
 
@@ -48,7 +48,7 @@ def fastq_to_sai(input_file, output_file):
     cmd_dict['outfile'] = output_file
     pmsg('FASTQ to SAI', cmd_dict['infile'], cmd_dict['outfile'])
     bwacmd = '%(bwa)s aln -t %(threads)s %(genome)s %(infile)s > %(outfile)s'
-    call(bwacmd % cmd_dict)
+    call(bwacmd, cmd_dict)
 
 # Merge paired ends to SAM
 @follows(fastq_to_sai, mkdir('sam'))
@@ -80,7 +80,7 @@ def paired_ends_to_sam(input_files, output_file):
     cmd_dict['infiles'] = ' '.join(input_files)
     cmd_dict['outfile'] = output_file.strip('.gz')
     bwa_cmd = '%(bwa)s sampe %(genome)s %(infiles)s > %(outfile)s'
-    call(bwa_cmd % cmd_dict)
+    call(bwa_cmd, cmd_dict)
 
 ## Convert filtered SAM files to BAM files
 @follows(paired_ends_to_sam, mkdir('bam'))
@@ -92,7 +92,7 @@ def sam_to_bam(input_file, output_file):
     cmd_dict['outfile'] = output_file
     pmsg('SAM to BAM', cmd_dict['infile'], cmd_dict['outfile'])
     sam_cmd = '%(samtools)s import %(genome)s.fai %(infile)s %(outfile)s'
-    call(sam_cmd % cmd_dict)
+    call(sam_cmd, cmd_dict)
 
 # Sort BAM file by name
 @follows(sam_to_bam, mkdir('namesorted_bam'))
@@ -105,7 +105,7 @@ def namesort_bam(input_file, output_file):
     cmd_dict['outprefix'] = os.path.splitext(output_file)[0]
     pmsg('BAM Name Sort', cmd_dict['infile'], cmd_dict['outfile'])
     sam_cmd = '%(samtools)s sort -n %(infile)s %(outprefix)s'
-    call(sam_cmd % cmd_dict)
+    call(sam_cmd, cmd_dict)
 
 # Run samtools fixmate on namesorted BAM file
 @follows(namesort_bam, mkdir('fixmate_bam'))
@@ -118,7 +118,7 @@ def fixmate_bam(input_file, output_file):
     cmd_dict['outfile'] = output_file
     pmsg('Fix Mate Info', cmd_dict['infile'], cmd_dict['outfile'])
     sam_cmd = '%(samtools)s fixmate %(infile)s %(outfile)s'
-    call(sam_cmd % cmd_dict)
+    call(sam_cmd, cmd_dict)
 
 # Sort BAM file
 @follows(fixmate_bam, mkdir('sorted_bam'))
@@ -133,7 +133,7 @@ def sort_bam(input_file, output_file):
     pmsg('BAM Coord Sort', cmd_dict['infile'], cmd_dict['outfile'])
     picard_cmd = '%(picard)s SortSam INPUT=%(infile)s OUTPUT=%(outfile)s ' + \
             'SORT_ORDER=coordinate MAX_RECORDS_IN_RAM=5000000'
-    call(picard_cmd % cmd_dict)
+    call(picard_cmd, cmd_dict)
 
 # Remove duplicates
 @follows(sort_bam, mkdir('deduped_bam'))
@@ -148,7 +148,7 @@ def remove_duplicates(input_file, output_file):
     pmsg('Remove duplicates', input_file, output_file)
     picard_cmd = '%(picard)s MarkDuplicates I=%(infile)s O=%(outfile)s M=%(metrics)s ' + \
             'REMOVE_DUPLICATES=true'
-    call(picard_cmd % cmd_dict)
+    call(picard_cmd, cmd_dict)
 
 # Update header with missing data
 @follows(remove_duplicates, mkdir('prepped_bam'))
@@ -166,7 +166,7 @@ def fix_header(input_file, output_file):
     )
     picard_cmd = '%(picard)s ReplaceSamHeader INPUT=%(infile)s HEADER=%(header_tmp)s ' + \
             'OUTPUT=%(outfile)s'
-    call(picard_cmd % cmd_dict)
+    call(picard_cmd, cmd_dict)
     os.remove(cmd_dict['header_tmp'])
 
 # Create index from BAM - creates BAI files
@@ -177,8 +177,9 @@ def bam_index(input_file, output_file):
     pmsg('Create BAM Index', input_file, output_file)
     cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
+    cmd_dict['outfile'] = output_file
     sam_cmd = '%(samtools)s index %(infile)s'
-    call(sam_cmd % cmd_dict)
+    call(sam_cmd, cmd_dict)
 
 stages_dict = {
     'copy_sequences': copy_sequences,
