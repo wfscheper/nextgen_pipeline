@@ -12,10 +12,20 @@ from log import quick_start_log
 from ruffus import pipeline_run
 
 
+PIPELINE_PATH = 'pipelines.'
 DEBUG = True
+
+def show_pipeline_help():
+    print "Please choose one of the following pipelines:"
+    for pipeline in glob('%s/pipelines/*.py' % sys.path[0]):
+        if '__init__' in pipeline: continue
+        pipeline = os.path.splitext(pipeline.rpartition(os.path.sep)[-1])[0]
+        print '\t%s' % (pipeline)
+    sys.exit(0)
+
 def show_pipeline_stage_help():
     print "The pipeline stage you selected does not exist."
-    print "Please choose one of the following options (* default stage):"
+    print "Please choose one of the following stages (* default stage):"
     for pipeline, stages_dict in pipeline_stages.items():
         print '\t%s' % (pipeline)
         for stage, fn in stages_dict.items():
@@ -41,14 +51,14 @@ if __name__ == '__main__':
     
     ncpus = multiprocessing.cpu_count()
 
-    if options.pipeline is None:
-        parser.error('Must specify a pipeline')
-    else:
-        try:
-            pipeline = __import__(options.pipeline, globals(), locals(), ['*'])
-        except ImportError as e:
-            parser.error('Unable to load pipeline named %s' % options.pipeline)
-        pipeline_stages.update({options.pipeline: pipeline.stages_dict})
+    # load the pipeline request by the user
+    try:
+        pipeline = __import__(PIPELINE_PATH + options.pipeline, globals(), locals(), ['*'])
+    except (ImportError, TypeError) as e:
+        # either no pipeline was requested or a missing/non-existant
+        # pipeline was chosen
+        show_pipeline_help()
+    pipeline_stages.update({options.pipeline: pipeline.stages_dict})
 
     if options.stage:
         if options.stage not in pipeline_stages[options.pipeline].keys():
