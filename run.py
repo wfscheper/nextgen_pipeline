@@ -7,9 +7,9 @@ import multiprocessing
 
 from glob import iglob as glob
 from optparse import OptionParser
+from ruffus import pipeline_run
 
 from log import quick_start_log
-from ruffus import pipeline_run
 
 
 PIPELINE_PATH = 'pipelines.'
