@@ -13,7 +13,7 @@ from log import quick_start_log
 
 
 PIPELINE_PATH = 'pipelines.'
-DEBUG = True
+DEBUG = False
 
 def show_pipeline_help():
     print "Please choose one of the following pipelines:"
