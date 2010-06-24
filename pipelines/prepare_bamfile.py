@@ -111,7 +111,13 @@ def namesort_bam(input_file, output_file):
     cmd_dict['outfile'] = output_file
     cmd_dict['outprefix'] = os.path.splitext(output_file)[0]
     pmsg('BAM Name Sort', cmd_dict['infile'], cmd_dict['outfile'])
-    sam_cmd = '%(samtools)s sort -n %(infile)s %(outprefix)s'
+    #sam_cmd = '%(samtools)s sort -n %(infile)s %(outprefix)s'
+    samtools_cmd = '%(samtools)s SortSam ' + \
+            'I=$(infile)s ' + \
+            'O=$(outfile)s ' + \
+            'SO=name '+ \
+            'MAX_RECORDS_IN_RAM=50000000 ' + \
+            'VALIDATION_STRINGENCY=SILENT'
     call(sam_cmd, cmd_dict)
 
 # Run samtools fixmate on namesorted BAM file
@@ -138,8 +144,12 @@ def sort_bam(input_file, output_file):
     cmd_dict['outfile'] = output_file
     cmd_dict['outprefix'] = os.path.splitext(cmd_dict['outfile'])[0]
     pmsg('BAM Coord Sort', cmd_dict['infile'], cmd_dict['outfile'])
-    picard_cmd = '%(picard)s SortSam INPUT=%(infile)s OUTPUT=%(outfile)s ' + \
-            'SORT_ORDER=coordinate MAX_RECORDS_IN_RAM=5000000'
+    picard_cmd = '%(picard)s SortSam ' + \
+            'I=%(infile)s ' + \
+            'O=%(outfile)s ' + \
+            'SO=coordinate ' + \
+            'MAX_RECORDS_IN_RAM=50000000 ' + \
+            'VALIDATION_STRINGENCY=SILENT'
     call(picard_cmd, cmd_dict)
 
 # Remove duplicates
@@ -153,8 +163,12 @@ def remove_duplicates(input_file, output_file):
     cmd_dict['outfile'] = output_file
     cmd_dict['metrics'] = output_file.rstrip('bam') + 'metrics'
     pmsg('Remove duplicates', input_file, output_file)
-    picard_cmd = '%(picard)s MarkDuplicates I=%(infile)s O=%(outfile)s M=%(metrics)s ' + \
-            'REMOVE_DUPLICATES=true'
+    picard_cmd = '%(picard)s MarkDuplicates ' + \
+            'I=%(infile)s ' + \
+            'O=%(outfile)s ' + \
+            'M=%(metrics)s ' + \
+            'REMOVE_DUPLICATES=true' + \
+            'VALIDATION_STRINGENCY=SILENT'
     call(picard_cmd, cmd_dict)
 
 # Update header with missing data
@@ -171,8 +185,12 @@ def fix_header(input_file, output_file):
     open(cmd_dict['header_tmp'], 'w').write(
         open(cmd_dict['header_template'], 'r').read() % cmd_dict
     )
-    picard_cmd = '%(picard)s ReplaceSamHeader INPUT=%(infile)s HEADER=%(header_tmp)s ' + \
-            'OUTPUT=%(outfile)s'
+    picard_cmd = '%(picard)s ReplaceSamHeader ' + \
+            'I=%(infile)s ' + \
+            'O=%(outfile)s' + \
+            'HEADER=%(header_tmp)s ' + \
+            'VALIDATION_STRINGENCY=SILENT'
+
     call(picard_cmd, cmd_dict)
     os.remove(cmd_dict['header_tmp'])
 
