@@ -111,13 +111,13 @@ def namesort_bam(input_file, output_file):
     cmd_dict['outprefix'] = os.path.splitext(output_file)[0]
     pmsg('BAM Name Sort', cmd_dict['infile'], cmd_dict['outfile'])
     #sam_cmd = '%(samtools)s sort -n %(infile)s %(outprefix)s'
-    sam_cmd = '%(samtools)s SortSam ' + \
+    picard_cmd = '%(picard)s SortSam ' + \
             'I=%(infile)s ' + \
             'O=%(outfile)s ' + \
             'SO=name '+ \
             'MAX_RECORDS_IN_RAM=50000000 ' + \
             'VALIDATION_STRINGENCY=SILENT'
-    call(sam_cmd, cmd_dict)
+    call(picard_cmd, cmd_dict)
 
 # Run samtools fixmate on namesorted BAM file
 @follows(namesort_bam, mkdir('fixmate_bam'))
