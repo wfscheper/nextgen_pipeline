@@ -6,7 +6,6 @@ Required for any pipelines that use the Genome Analysis Toolkit.
 Currnetly, this means quality score recalibration and variant calling.
 '''
 import os
-import logging
 from Bio import SeqIO
 from glob import iglob as glob
 
@@ -112,9 +111,9 @@ def namesort_bam(input_file, output_file):
     cmd_dict['outprefix'] = os.path.splitext(output_file)[0]
     pmsg('BAM Name Sort', cmd_dict['infile'], cmd_dict['outfile'])
     #sam_cmd = '%(samtools)s sort -n %(infile)s %(outprefix)s'
-    samtools_cmd = '%(samtools)s SortSam ' + \
-            'I=$(infile)s ' + \
-            'O=$(outfile)s ' + \
+    sam_cmd = '%(samtools)s SortSam ' + \
+            'I=%(infile)s ' + \
+            'O=%(outfile)s ' + \
             'SO=name '+ \
             'MAX_RECORDS_IN_RAM=50000000 ' + \
             'VALIDATION_STRINGENCY=SILENT'
