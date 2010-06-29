@@ -52,54 +52,60 @@ if __name__ == '__main__':
     # get number of cpus on machine
     ncpus = multiprocessing.cpu_count()
 
-    # load the pipeline request by the user
-    try:
-        pipeline = __import__(PIPELINE_PATH + options.pipeline, globals(), locals(), ['*'])
-    except (ImportError, TypeError) as e:
-        # either no pipeline was requested or a missing/non-existant
-        # pipeline was chosen
-        show_pipeline_help()
-    pipeline_stages.update({options.pipeline: pipeline.stages_dict})
+    # load the pipeline(s) request by the user
+    if options.pipeline:
+        pipelines = [ pipeline.strip() for pipeline in options.pipeline.split(',') ]
+    else:
+        from pipelines import pipelines
 
-    # did the user specify a stage
-    if options.stage:
-        if options.stage not in pipeline_stages[options.pipeline].keys():
-            # missing or non-existant stage chosen
-            show_pipeline_stage_help()
+    for pipeline in pipelines:
+        try:
+            pipeline = __import__(PIPELINE_PATH + pipeline, globals(), locals(), ['*'])
+        except (ImportError, TypeError) as e:
+            # either no pipeline was requested or a missing/non-existant
+            # pipeline was chosen
+            show_pipeline_help()
+        pipeline_stages.update({options.pipeline: pipeline.stages_dict})
+
+        # did the user specify a stage
+        if options.stage:
+            if options.stage not in pipeline_stages[options.pipeline].keys():
+                # missing or non-existant stage chosen
+                show_pipeline_stage_help()
+            else:
+                start_stage = pipeline_stages[options.pipeline][options.stage]
         else:
-            start_stage = pipeline_stages[options.pipeline][options.stage]
-    else:
-        # user did not specify a stage, use default
-        start_stage = pipeline_stages[options.pipeline]['default']
-    
-    # user specified thread count, capped at the number of cpus
-    if options.threads:
-        NUM_JOBS = options.threads if options.threads <= ncpus else ncpus
-    else:
-        NUM_JOBS = ncpus/2
-
-    # user speicified log file
-    if options.log:
-        (head, tail) = os.path.split(options.log)
-        if os.path.exists(head):
-            log_fn = options.log
+            # user did not specify a stage, use default
+            start_stage = pipeline_stages[options.pipeline]['default']
+        
+        # user specified thread count, capped at the number of cpus
+        if options.threads:
+            NUM_JOBS = options.threads if options.threads <= ncpus else ncpus
         else:
-            print "Unable to write to that log file."
-            sys.exit(0)
-    else:
-        cwd = os.getcwd()
-        now = datetime.datetime.now()
-        ts = now.strftime('%Y-%m-%d_%H%M%S')
-        log_fn = '%s/%s.%s.log' % (cwd, os.path.split(sys.argv[0])[1], ts)
+            NUM_JOBS = ncpus/2
 
-    logger = quick_start_log(log_fn=log_fn)
+        # user speicified log file
+        if options.log:
+            (head, tail) = os.path.split(options.log)
+            if os.path.exists(head):
+                log_fn = options.log
+            else:
+                print "Unable to write to that log file."
+                sys.exit(0)
+        else:
+            cwd = os.getcwd()
+            now = datetime.datetime.now()
+            ts = now.strftime('%Y-%m-%d_%H%M%S')
+            log_fn = '%s/%s.%s.log' % (cwd, os.path.split(sys.argv[0])[1], ts)
 
-    logger.debug('pipeline_run: %d jobs' % NUM_JOBS)
+        logger = quick_start_log(log_fn=log_fn)
 
-    # user said to force running of stage
-    if options.force_run:
-        pipeline_run([start_stage], forcedtorun_tasks=[start_stage], multiprocess=NUM_JOBS,
-                logger=logger)
-    else:
-        pipeline_run([start_stage], multiprocess=NUM_JOBS, logger=logger)
+        logger.debug('pipeline_run: %d jobs' % NUM_JOBS)
+
+        # user said to force running of stage
+        if options.force_run:
+            pipeline_run([start_stage], forcedtorun_tasks=[start_stage], multiprocess=NUM_JOBS,
+                    logger=logger)
+        else:
+            pipeline_run([start_stage], multiprocess=NUM_JOBS, logger=logger)
 
