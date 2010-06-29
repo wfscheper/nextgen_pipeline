@@ -115,7 +115,7 @@ def namesort_bam(input_file, output_file):
             'I=%(infile)s ' + \
             'O=%(outfile)s ' + \
             'SO=name '+ \
-            'MAX_RECORDS_IN_RAM=50000000 ' + \
+            'MAX_RECORDS_IN_RAM=5000000 ' + \
             'VALIDATION_STRINGENCY=SILENT'
     call(picard_cmd, cmd_dict)
 
