@@ -73,3 +73,12 @@ def call(command, command_dict):
     if DEBUG: command_line = DEBUG_COMMAND % command_dict
     subprocess.call(command_line, shell=True)
 
+def saicmp(x,y):
+    '''Compare function for moving sai files to front of list'''
+    if x.endswith('sai') and not y.endswith('sai'):
+        return -1
+    elif y.endswith('sai') and not x.endswith('sai'):
+        return 1
+    else:
+        return cmp(x,y)
+
