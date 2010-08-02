@@ -12,7 +12,7 @@ from glob import iglob as glob
 from ruffus import follows, files, inputs, jobs_limit, mkdir, regex, transform
 
 from zipper import zip
-from utils import call, paired_re, paired_strings, pmsg, read_group_re, CMD_DICT
+from utils import call, paired_re, paired_strings, pmsg, read_group_re, saicmp, CMD_DICT
 
 
 # Copy sequence from staging area
