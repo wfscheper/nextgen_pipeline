@@ -16,7 +16,7 @@ from utils import CMD_DICT, call, pmsg, unpaired_re, unpaired_strings
 # Find candidate intervals for realignment
 def create_intervals_generator():
     cwd = os.getcwd()
-    for file in glob('%s/recal_bam/*.bam' % cwd):
+    for file in glob('%s/recalibrated/*.bam' % cwd):
         filename = '%s/indel_intervals/%s' % (cwd, unpaired_strings['intervals'] % \
                 unpaired_re.search(file).groupdict())
         yield [file, filename]
@@ -38,14 +38,14 @@ def create_intervals(input_file, output_file):
     call(gatk_cmd, cmd_dict)
 
 # Realign around possible indels
-@follows(create_intervals, mkdir('cleaned_bam'))
+@follows(create_intervals, mkdir('realigned'))
 @transform(create_intervals, regex(r'^(.*)/indel_intervals/(.+)\.intervals$'),
-        inputs([r'\1/recal_bam/\2.recalibrated.bam', r'\1/indel_intervals/\2.intervals']),
-        r'\1/cleaned_bam/\2.cleaned.bam')
+        inputs([r'\1/recalibrated/\2.recalibrated.bam', r'\1/indel_intervals/\2.intervals']),
+        r'\1/realigned/\2.realigned.bam')
 def local_realignment(input_files, output_file):
     '''Realign reads around candidate indels'''
     cmd_dict = CMD_DICT.copy()
-    cmd_dict['recal_bam'] = input_files[0]
+    cmd_dict['recalibrated'] = input_files[0]
     cmd_dict['indel_intervals'] = input_files[1]
     cmd_dict['outfile'] = output_file
     pmsg('Local Realignment', ', '.join(input_files), output_file)
@@ -53,17 +53,36 @@ def local_realignment(input_files, output_file):
             '-T IndelRealigner ' + \
             '-R %(genome)s ' + \
             '-D %(dbsnp)s ' + \
-            '-I %(recal_bam)s ' + \
+            '-I %(recalibrated)s ' + \
             '-targetIntervals %(indel_intervals)s ' + \
-            '-mrl 20000 ' + \
             '--output %(outfile)s'
     call(gatk_cmd, cmd_dict)
     samtools_cmd = '%(samtools)s index %(outfile)s'
     call(samtools_cmd, cmd_dict)
 
+# Fix mate info post realignment
+@follows(local_realignment, mkdir('realigned_fixmate'))
+@transform(local_realignment, regex(r'^(.*)/realigned/(.+)\.realigned\.bam$'),
+        r'\1/realigned_fixmate/\2.realigned_fixmate.bam')
+def fix_mate_realigned(input_file, output_file):
+    '''Fix mate info post-realignment'''
+    cmd_dict = CMD_DICT.copy()
+    cmd_dict['infile'] = input_file
+    cmd_dict['outfile'] = output_file
+    pmsg('Fix Mate Info', cmd_dict['infile'], cmd_dict['outfile'])
+    picard_cmd = '%(picard)s FixMateInformation ' + \
+            'I=%(infile)s ' + \
+            'O=%(outfile)s ' + \
+            'SO=coordinate ' + \
+            'MAX_RECORDS_IN_RAM=7500000 ' + \
+            'VALIDATION_STRINGENCY=SILENT'
+    call(picard_cmd, cmd_dict)
+    samtools_cmd = '%(samtools)s index %(outfile)s'
+    call(samtools_cmd, cmd_dict)
+
 # Call Indels
-@follows(local_realignment, mkdir('indels'))
-@transform(local_realignment, regex(r'^(.*)/cleaned_bam/(.*)\.cleaned\.bam$'),
+@follows(fix_mate_realigned, mkdir('indels'))
+@transform(fix_mate_realigned, regex(r'^(.*)/realigned_fixmate/(.*)\.realigned_fixmate\.bam$'),
         r'\1/indels/\2_indels.detailed.bed',
         r'\1/indels/\2_indels.raw.bed')
 def indel_genotyping(input_file, details_file, raw_file):
@@ -101,8 +120,8 @@ def filter_indels(input_file, output_file):
     call(filter_cmd, cmd_dict)
 
 # Call SNPs
-@follows(local_realignment, mkdir('snps'))
-@transform(local_realignment, regex(r'^(.*)/cleaned_bam/(.*)\.cleaned\.bam$'),
+@follows(fix_mate_realigned, mkdir('snps'))
+@transform(fix_mate_realigned, regex(r'^(.*)/realigned_fixmate/(.*)\.realigned_fixmate\.bam$'),
         r'\1/snps/\2_snps.raw.vcf')
 def snp_genotyping(input_file, output_file):
     '''Call SNP variants'''
@@ -167,6 +186,7 @@ def filter_snps(input_files, output_file):
 stages_dict = {
     'create_intervals': create_intervals,
     'local_realignment': local_realignment,
+    'fix_realigned_mates': fix_mate_realigned,
     'indel_genotyping': indel_genotyping,
     'filter_indels': filter_indels,
     'snp_genotyping': snp_genotyping,

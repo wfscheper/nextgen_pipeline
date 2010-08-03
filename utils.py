@@ -6,15 +6,13 @@ from run import DEBUG
 
 
 DEBUG_COMMAND = 'touch %(outfile)s'
-GENOME_ANALYSIS_JAR = '/opt/GenomeAnalysisTK/GenomeAnalysisTK.jar'
-MEM = 'Xmx4g'
 
 CMD_DICT = {
     'threads': '4',
     # commands
     'bwa': '/usr/local/bin/bwa',
     'filterIndels': '/usr/local/bin/filterSingleSampleCalls.pl',
-    'gatk': 'java -%s -Djava.io.tmpdir=/tmp/$USER -jar %s' % (MEM, GENOME_ANALYSIS_JAR),
+    'gatk': '/usr/local/bin/gatk.sh',
     'makeIndelMask': '/usr/local/bin/makeIndelMask.py',
     'picard': '/usr/local/bin/picard.sh',
     'sampl': '/usr/bin/perl /usr/local/bin/samtools.pl',

@@ -17,7 +17,7 @@ from utils import call, pmsg, unpaired_re, unpaired_strings, CMD_DICT
 # Calculate Covariates for Quality Score Recalibration
 def count_covariates_generator():
     cwd = os.getcwd()
-    for file in glob('%s/prepped_bam/*.bam' % cwd):
+    for file in glob('%s/prepped/*.bam' % cwd):
         filename = '%s/recal_data/%s' % (cwd, unpaired_strings['recal_data'] % \
                 unpaired_re.search(file).groupdict())
         yield [file, filename]
@@ -39,14 +39,14 @@ def count_covariates(input_file, output_file):
 @follows(mkdir('recal_data'))
 @files(count_covariates_generator)
 def sorted_count_covariates(input_file, output_file):
-    '''Run CounCovariates on files in sorted_bam/'''
+    '''Run CounCovariates on files in sorted/'''
     count_covariates(input_file, output_file)
 
 # Apply Quality Score Recalibration
-@follows(sorted_count_covariates, mkdir('recal_bam'))
+@follows(sorted_count_covariates, mkdir('recalibrated'))
 @transform(sorted_count_covariates, regex(r'^(.*)/recal_data/(.*).prepped.csv$'),
-        inputs([r'\1/recal_data/\2.prepped.csv', r'\1/prepped_bam/\2.prepped.bam']),
-        r'\1/recal_bam/\2.recalibrated.bam')
+        inputs([r'\1/recal_data/\2.prepped.csv', r'\1/prepped/\2.prepped.bam']),
+        r'\1/recalibrated/\2.recalibrated.bam')
 def recalibrate_quality_scores(input_files, output_file):
     '''Apply Recalibrated QSs to BAM file'''
     cmd_dict = CMD_DICT.copy()
@@ -66,10 +66,10 @@ def recalibrate_quality_scores(input_files, output_file):
 
 # Generate QS Recalibration Covariates
 @follows(recalibrate_quality_scores)
-@transform(recalibrate_quality_scores, regex(r'^(.*)/recal_bam/(.*).recalibrated.bam$'),
+@transform(recalibrate_quality_scores, regex(r'^(.*)/recalibrated/(.*).recalibrated.bam$'),
         r'\1/recal_data/\2.recalibrated.csv')
 def recal_count_covariates(input_file, output_file):
-    '''Run CountCovariates on files in recal_bam/'''
+    '''Run CountCovariates on files in recalibrated/'''
     count_covariates(input_file, output_file)
 
 stages_dict = {
