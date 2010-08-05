@@ -29,7 +29,6 @@ CMD_DICT = {
     'hard_to_validate_filter': '\"MQ0 >= 4 && ((MQ0 / (1.0 * DP)) > 0.1)\"',
 }
 
-#fastq_re = re.compile('fastq')
 paired_re = re.compile(r'(?P<line>\w+)_s_(?P<lane>\d+)_(?P<pair>[12])(?P<rest>.*)')
 unpaired_re = re.compile(r'(?P<line>\w+)_s_(?P<lane>\d+)(?P<ext>.*)')
 read_group_re = re.compile(r'^(?P<sample>[a-zA-Z0-9]+)_(?P<run_barcode>[a-zA-Z0-9]+)(_\d+)?_s_(?P<lane>\d+)$')
@@ -40,6 +39,7 @@ paired_strings = {
     'sai': '%(line)s_s_%(lane)s_%(pair)s.sai',
 }
 unpaired_strings = {
+    'sai': '%(line)s_s_%(lane)s.sai',
     'sam': '%(line)s_s_%(lane)s.sam',
     'bam': '%(line)s_s_%(lane)s.bam',
     'recal_data': '%(line)s_s_%(lane)s.prepped.csv',
