@@ -11,6 +11,7 @@ CMD_DICT = {
     'threads': '4',
     # commands
     'bwa': '/usr/local/bin/bwa',
+    'clip_reads': '/usr/local/bin/clip_se_reads.py',
     'filterIndels': '/usr/local/bin/filterSingleSampleCalls.pl',
     'gatk': '/usr/local/bin/gatk.sh',
     'makeIndelMask': '/usr/local/bin/makeIndelMask.py',
@@ -18,11 +19,12 @@ CMD_DICT = {
     'sampl': '/usr/bin/perl /usr/local/bin/samtools.pl',
     'samtools': '/usr/local/bin/samtools',
     # data files
+    'dbsnp': '../resources/dbsnp_130_b37.rod',
     'exome': '../resources/hg19_capture.interval_list',
     'genome': '../resources/human_g1k_v37.fasta',
-    'dbsnp': '../resources/dbsnp_130_b37.rod',
     'header_template': '../resources/header.template',
     'header_tmp': '/tmp/header-%(read_group)s',
+    'primers': '../resources/ceph_raindance_1_primers_hg19.bed',
     # filters
     'standard_filter': '\"QUAL < 30.0 || AB > 0.75 && DP > 40 || QD < 5.0 || HRun > 5 || ' + \
         'SB > -0.10\"',
@@ -31,8 +33,10 @@ CMD_DICT = {
 
 paired_re = re.compile(r'(?P<line>\w+)_s_(?P<lane>\d+)_(?P<pair>[12])(?P<rest>.*)')
 unpaired_re = re.compile(r'(?P<line>\w+)_s_(?P<lane>\d+)(?P<ext>.*)')
-read_group_re = re.compile(r'^(?P<sample>[a-zA-Z0-9]+)_(?P<run_barcode>[a-zA-Z0-9]+)(_\d+)?_s_(?P<lane>\d+)$')
-
+read_group_re = re.compile(
+    r'^.*(?P<read_group>(?P<sample>[a-zA-Z0-9]+)_(?P<run_barcode>[a-zA-Z0-9]+))' + \
+    '(_\d+)?_s_(?P<lane>\d+).*$'
+)
 paired_strings = {
     'sequence': '%(line)s_s_%(lane)s_%(pair)s_sequence.txt',
     'fastq': '%(line)s_s_%(lane)s_%(pair)s_sequence.fastq',

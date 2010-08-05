@@ -20,7 +20,7 @@ from utils import call, unpaired_re, pmsg, read_group_re, saicmp, CMD_DICT
 def copy_sequence_generator():
     cwd = os.getcwd()
     for infile in glob('./staging_area/*'):
-        outfile = '%(line)s_s_%(lane)s_sequence.fastq.gz' % \
+        outfile = '%(line)s_s_%(lane)s.fastq.gz' % \
                 unpaired_re.search(infile).groupdict()
         yield [infile, '%s/fastq/%s' % (cwd, outfile)]
 
@@ -72,23 +72,100 @@ def create_sam(input_files, output_file):
     bwa_cmd = '%(bwa)s samse %(genome)s %(infiles)s > %(outfile)s'
     call(bwa_cmd, cmd_dict)
 
-## Convert filtered SAM files to BAM files
+@follows(mkdir('sorted'))
+@transform(create_sam, regex(r'^(.*)/sam/(.*)\.sam$'), r'\1/sorted/\2.sorted.sam')
+def coordinate_sort_sam(input_file, output_file):
+    '''Sort SAM file by coordinates'''
+    cmd_dict = CMD_DICT.copy()
+    cmd_dict['infile'] = input_file
+    cmd_dict['outfile'] = output_file
+    pmsg('SAM coordinate sort', cmd_dict['infile'], cmd_dict['outfile'])
+    picard_cmd = '%(picard)s SortSam ' + \
+            'I=%(infile)s ' + \
+            'O=%(outfile)s ' + \
+            'SO=coordinate'
+    call(picard_cmd, cmd_dict)
+
+@follows(mkdir('clipped'))
+@transform(coordinate_sort_sam, regex(r'^(.*)/sorted/(.+)\.sorted\.sam$'),
+        r'\1/clipped/\2.clipped.sam')
+def clip_reads(input_file, output_file):
+    '''Clip reads around primers'''
+    cmd_dict = CMD_DICT.copy()
+    cmd_dict['infile'] = input_file
+    cmd_dict['outfile'] = output_file
+    pmsg('Read clipping', cmd_dict['infile'], cmd_dict['outfile'])
+    clip_cmd = '%(clip_reads)s --out %(outfile)s %(primers)s %(infile)s'
+    call(clip_cmd, cmd_dict)
+
 @follows(mkdir('bam'))
-@transform(create_sam, regex(r'^(.*)/sam/(.+)\.sam$'), r'\1/bam/\2.bam')
+@transform(clip_reads, regex(r'^(.*)/clipped/(.+)\.clipped\.sam$'), r'\1/bam/\2.clipped.bam')
 def sam_to_bam(input_file, output_file):
-    '''Convert SAM files to BAM files.'''
+    '''Convert SAM file to BAM'''
     cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('SAM to BAM', cmd_dict['infile'], cmd_dict['outfile'])
-    sam_cmd = '%(samtools)s import %(genome)s.fai %(infile)s %(outfile)s'
-    call(sam_cmd, cmd_dict)
+    picard_cmd = '%(picard)s SamFormatConverter ' + \
+            'I=%(infile)s ' + \
+            'O=%(outfile)s'
+    call(picard_cmd, cmd_dict)
+
+# Update header with missing data
+@follows(mkdir('prepped'))
+@transform(sam_to_bam, regex(r'^(.*)/bam/(.*)\.clipped\.bam$'), r'\1/prepped/\2.prepped.bam')
+def fix_header(input_file, output_file):
+    '''Fix header info'''
+    cmd_dict = CMD_DICT.copy()
+    cmd_dict['infile'] = input_file
+    cmd_dict['outfile'] = output_file
+    cmd_dict.update(read_group_re.match(input_file).groupdict())
+    cmd_dict['header_tmp'] = cmd_dict['header_tmp'] % cmd_dict
+    open(cmd_dict['header_tmp'], 'w').write(
+        open(cmd_dict['header_template'], 'r').read() % cmd_dict
+    )
+    picard_cmd = '%(picard)s ReplaceSamHeader ' + \
+            'I=%(infile)s ' + \
+            'O=%(outfile)s ' + \
+            'HEADER=%(header_tmp)s ' + \
+            'MAX_RECORDS_IN_RAM=500000 ' + \
+            'VALIDATION_STRINGENCY=SILENT'
+    call(picard_cmd, cmd_dict)
+    os.remove(cmd_dict['header_tmp'])
+    pmsg('Index BAM', cmd_dict['infile'], cmd_dict['outfile'])
+    picard_cmd = '%(picard)s BuildBamIndex ' + \
+            'I=%(outfile)s ' + \
+            'O=%(outfile)s.bai ' + \
+            'OVERWRITE=true'
+    call(picard_cmd, cmd_dict)
+
+@follows(mkdir('coverage'))
+@transform(fix_header, regex(r'^(.*)/prepped/(.+)\.prepped\.bam$'), r'\1/coverage/\2.coverage')
+def calculate_coverage(input_file, output_file):
+    '''Calculate coverage statistics'''
+    cmd_dict = CMD_DICT.copy()
+    cmd_dict['infile'] = input_file
+    cmd_dict['outfile'] = output_file
+    pmsg('Coverage calculations', cmd_dict['infile'], cmd_dict['outfile'])
+    gatk_cmd = '%(gatk)s -T DepthOfCoverage ' + \
+            '-I %(infile)s ' + \
+            '-L %(exome)s ' + \
+            '-R %(genome)s ' + \
+            '-o %(outfile)s ' + \
+            '--minMappingQuality 10 ' + \
+            '--minBaseQuality 10 ' + \
+            '-omitBaseOutput'
+    call(gatk_cmd, cmd_dict)
 
 stages_dict = {
     'copy_sequence': copy_sequence,
     'align_sequence': align_sequence,
     'create_sam': create_sam,
+    'sort_sam': coordinate_sort_sam,
+    'clip_reads': clip_reads,
     'sam_to_bam': sam_to_bam,
-    'default': sam_to_bam,
+    'fix_header': fix_header,
+    'calculate_coverage': calculate_coverage,
+    'default': calculate_coverage,
 }
 
