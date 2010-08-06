@@ -83,7 +83,8 @@ def coordinate_sort_sam(input_file, output_file):
     picard_cmd = '%(picard)s SortSam ' + \
             'I=%(infile)s ' + \
             'O=%(outfile)s ' + \
-            'SO=coordinate'
+            'SO=coordinate ' + \
+            'VALIDATION_STRINGENCY=SILENT'
     call(picard_cmd, cmd_dict)
 
 @follows(mkdir('clipped'))
@@ -108,7 +109,8 @@ def sam_to_bam(input_file, output_file):
     pmsg('SAM to BAM', cmd_dict['infile'], cmd_dict['outfile'])
     picard_cmd = '%(picard)s SamFormatConverter ' + \
             'I=%(infile)s ' + \
-            'O=%(outfile)s'
+            'O=%(outfile)s ' + \
+            'VALIDATION_STRINGENCY=SILENT'
     call(picard_cmd, cmd_dict)
 
 # Update header with missing data
