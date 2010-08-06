@@ -14,7 +14,7 @@ CMD_DICT = {
     'clip_reads': '/usr/local/bin/clip_se_reads.py',
     'filterIndels': '/usr/local/bin/filterSingleSampleCalls.pl',
     'gatk': '/usr/local/bin/gatk.sh',
-    'makeIndelMask': '/usr/local/bin/makeIndelMask.py',
+    'makeIndelMask': '/usr/bin/env python /usr/local/bin/makeIndelMask.py',
     'picard': '/usr/local/bin/picard.sh',
     'sampl': '/usr/bin/perl /usr/local/bin/samtools.pl',
     'samtools': '/usr/local/bin/samtools',
