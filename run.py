@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import datetime
 import os
 import sys
@@ -7,7 +6,7 @@ import multiprocessing
 
 from glob import iglob as glob
 from optparse import OptionParser
-from ruffus import pipeline_run
+from ruffus import pipeline_run, pipeline_printout_graph
 
 from log import quick_start_log
 
@@ -44,6 +43,8 @@ parser.add_option('-t', '--threads', action='store', type='int', dest='threads',
 parser.add_option('-f', '--force', action='store_true', dest='force_run', 
                   default=False, help='Force pipeline to run stage')
 parser.add_option('-l', '--log', dest='log', default=None, help='path to log file')
+parser.add_option('--graph', dest='print_graph', default=False, action='store_true',
+        help='Print a graph of the pipeline rather than running it')
 
 if __name__ == '__main__':
     pipeline_stages = {}
@@ -103,9 +104,10 @@ if __name__ == '__main__':
         logger.debug('pipeline_run: %d jobs' % NUM_JOBS)
 
         # user said to force running of stage
-        if options.force_run:
-            pipeline_run([start_stage], forcedtorun_tasks=[start_stage], multiprocess=NUM_JOBS,
-                    logger=logger)
+        if options.print_graph:
+            pipeline_printout_graph('pipeline.jpg', 'jpg', [start_stage],
+                    forcedtorun_tasks=([start_stage] if options.force_run else []))
         else:
-            pipeline_run([start_stage], multiprocess=NUM_JOBS, logger=logger)
+            pipeline_run([start_stage], forcedtorun_tasks=([start_stage] if options.force_run else
+                []), multiprocess=NUM_JOBS, logger=logger)
 
