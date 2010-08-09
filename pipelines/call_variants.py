@@ -69,7 +69,7 @@ def snp_genotyping(input_file, output_file):
 
 # Filter Indels
 @transform(indel_genotyping, regex(r'^(.*)/indels/(.+)\.detailed\.bed$'),
-        inputs([r'\1/indels/\2.detailed.bed']),
+        inputs(r'\1/indels/\2.detailed.bed'),
         r'\1/indels/\2.filtered.bed')
 def filter_indels(input_file, output_file):
     '''Filter indel calls'''
