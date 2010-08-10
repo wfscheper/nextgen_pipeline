@@ -11,8 +11,13 @@ import os
 from glob import iglob as glob
 from ruffus import files, follows, inputs, mkdir, regex, transform
 
-from utils import call, pmsg, unpaired_re, unpaired_strings, CMD_DICT
+from utils import call, jobs_limit, pmsg, unpaired_re, unpaired_strings, CMD_DICT
 
+
+@jobs_limit(1)
+def clean_up():
+    print 'Cleaning up intermeidate files'
+    call('rm -rf bam/ clipped/ dedupped/ sam/ sorted/', {})
 
 # Calculate Covariates for Quality Score Recalibration
 def count_covariates_generator():
@@ -26,8 +31,6 @@ def count_covariates(input_file, output_file):
     cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
-    print 'Cleaning up intermeidate files'
-    call('rm -rf bam/ clipped/ sam/ sorted/', {})
     pmsg('Count Covariates', cmd_dict['infile'], cmd_dict['outfile'])
     gatk_cmd = '%(gatk)s ' + \
             '-T CountCovariates ' + \
@@ -38,7 +41,7 @@ def count_covariates(input_file, output_file):
             '-standard '
     call(gatk_cmd, cmd_dict)
 
-@follows(mkdir('recal_data'))
+@follows(clean_up, mkdir('recal_data'))
 @files(count_covariates_generator)
 def sorted_count_covariates(input_file, output_file):
     '''Run CounCovariates on files in sorted/'''
