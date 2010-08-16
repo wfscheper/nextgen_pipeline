@@ -2,10 +2,9 @@ import logging
 import re
 import subprocess
 
-from run import DEBUG
-
 
 DEBUG_COMMAND = 'touch %(outfile)s'
+DEBUG = False
 
 CMD_DICT = {
     'threads': '4',
