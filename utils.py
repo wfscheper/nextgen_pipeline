@@ -23,7 +23,6 @@ CMD_DICT = {
     'exome': '../resources/hg19_capture.interval_list',
     'genome': '../resources/human_g1k_v37.fasta',
     'header_template': '../resources/header.template',
-    'header_tmp': '/tmp/header-%(read_group)s',
     'primers': '../resources/ceph_raindance_1_primers_hg19.bed',
     # filters
     'standard_filter': '\"QUAL < 30.0 || AB > 0.75 && DP > 40 || QD < 5.0 || HRun > 5 || ' + \

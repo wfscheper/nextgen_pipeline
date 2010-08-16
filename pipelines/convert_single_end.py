@@ -122,7 +122,7 @@ def fix_header(input_file, output_file):
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     cmd_dict.update(read_group_re.match(input_file).groupdict())
-    cmd_dict['header_tmp'] = cmd_dict['header_tmp'] % cmd_dict
+    cmd_dict['header_tmp'] = '/tmp/header_%(read_group)s' % cmd_dict
     open(cmd_dict['header_tmp'], 'w').write(
         open(cmd_dict['header_template'], 'r').read() % cmd_dict
     )
