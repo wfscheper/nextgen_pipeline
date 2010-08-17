@@ -18,7 +18,7 @@ from utils import call, paired_re, paired_strings, pmsg, read_group_re, saicmp, 
 # Copy sequence from staging area
 def copy_sequence_generator():
     cwd = os.getcwd()
-    for file in glob('../staging_area/*_sequence.txt'):
+    for file in glob('./staging_area/*_sequence.txt'):
         filename = paired_strings['sequence'] % paired_re.search(file).groupdict()
         yield [file, '%s/fastq/%s.fastq.gz' % (cwd, filename.rstrip('.txt'))]
 
