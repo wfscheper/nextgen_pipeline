@@ -164,6 +164,24 @@ def bam_index(input_file, output_file):
     sam_cmd = '%(samtools)s index %(infile)s'
     call(sam_cmd, cmd_dict)
 
+@follows(mkdir('coverage'))
+@transform(fix_header, regex(r'^(.*)/prepped/(.+)\.prepped\.bam$'), r'\1/coverage/\2.coverage')
+def calculate_coverage(input_file, output_file):
+    '''Calculate coverage statistics'''
+    cmd_dict = CMD_DICT.copy()
+    cmd_dict['infile'] = input_file
+    cmd_dict['outfile'] = output_file
+    pmsg('Coverage calculations', cmd_dict['infile'], cmd_dict['outfile'])
+    gatk_cmd = '%(gatk)s -T DepthOfCoverage ' + \
+            '-I %(infile)s ' + \
+            '-R %(genome)s ' + \
+            '-L %(exome)s ' + \
+            '-o %(outfile)s ' + \
+            '--minMappingQuality 10 ' + \
+            '--minBaseQuality 10 ' + \
+            ''#'-omitBaseOutput'
+    call(gatk_cmd, cmd_dict)
+
 stages_dict = {
     'copy_sequences': copy_sequences,
     'align_sequences': fastq_to_sai,
@@ -172,6 +190,7 @@ stages_dict = {
     'sort_bam': sort_bam,
     'fix_header': fix_header,
     'index_bam': bam_index,
-    'default': bam_index,
+    'calculate_coverage': calculate_coverage,
+    'default': calculate_coverage,
 }
 
