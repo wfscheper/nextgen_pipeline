@@ -48,7 +48,7 @@ def sorted_count_covariates(input_file, output_file):
     count_covariates(input_file, output_file)
 
 # Apply Quality Score Recalibration
-@follows(sorted_count_covariates, mkdir('recalibrated'))
+@follows(mkdir('recalibrated'))
 @transform(sorted_count_covariates, regex(r'^(.*)/recal_data/(.*).prepped.csv$'),
         inputs([r'\1/recal_data/\2.prepped.csv', r'\1/prepped/\2.prepped.bam']),
         r'\1/recalibrated/\2.recalibrated.bam')
@@ -70,7 +70,6 @@ def recalibrate_quality_scores(input_files, output_file):
     call(samtools_cmd, cmd_dict)
 
 # Generate QS Recalibration Covariates
-@follows(recalibrate_quality_scores)
 @transform(recalibrate_quality_scores, regex(r'^(.*)/recalibrated/(.*).recalibrated.bam$'),
         r'\1/recal_data/\2.recalibrated.csv')
 def recal_count_covariates(input_file, output_file):
@@ -96,7 +95,7 @@ def create_intervals(input_file, output_file):
     call(gatk_cmd, cmd_dict)
 
 # Realign around possible indels
-@follows(create_intervals, mkdir('realigned'))
+@follows(mkdir('realigned'))
 @transform(create_intervals, regex(r'^(.*)/indel_intervals/(.+)\.intervals$'),
         inputs([r'\1/recalibrated/\2.recalibrated.bam', r'\1/indel_intervals/\2.intervals']),
         r'\1/realigned/\2.realigned.bam')
