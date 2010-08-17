@@ -156,7 +156,7 @@ def calculate_coverage(input_file, output_file):
             '-o %(outfile)s ' + \
             '--minMappingQuality 10 ' + \
             '--minBaseQuality 10 ' + \
-            '-omitBaseOutput'
+            ''#'-omitBaseOutput'
     call(gatk_cmd, cmd_dict)
 
 stages_dict = {
