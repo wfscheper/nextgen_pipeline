@@ -37,7 +37,7 @@ def copy_sequences(input_file, output_file):
     zip(cmd_dict['outfile_prefix'])
 
 @jobs_limit(2)
-@follows(copy_sequences, mkdir('sai'))
+@follows(mkdir('sai'))
 @transform(copy_sequences, regex(r'^(.*)/fastq/(.*)\.fastq\.gz$'), r'\1/sai/\2.sai')
 def fastq_to_sai(input_file, output_file):
     '''Convert FASTQ files to SAI files.'''
@@ -49,10 +49,9 @@ def fastq_to_sai(input_file, output_file):
     call(bwacmd, cmd_dict)
 
 # Merge paired ends to SAM
-@follows(fastq_to_sai, mkdir('sam'))
-@transform(fastq_to_sai,
-            regex(r'^(.*)/sai/(\w+)_s_(\d+)_1_sequence\.sai$'),
-            inputs([r'\1/sai/\2_s_\3_2_sequence.sai',
+@follows(mkdir('sam'))
+@transform(fastq_to_sai, regex(r'^(.*)/sai/(\w+)_s_(\d+)_1_sequence\.sai$'),
+           inputs([r'\1/sai/\2_s_\3_2_sequence.sai',
                    r'\1/sai/\2_s_\3_1_sequence.sai',
                    r'\1/fastq/\2_s_\3_1_sequence.fastq.gz',
                    r'\1/fastq/\2_s_\3_2_sequence.fastq.gz']),
@@ -81,7 +80,7 @@ def paired_ends_to_sam(input_files, output_file):
     call(bwa_cmd, cmd_dict)
 
 ## Convert filtered SAM files to BAM files
-@follows(paired_ends_to_sam, mkdir('bam'))
+@follows(mkdir('bam'))
 @transform(paired_ends_to_sam, regex(r'^(.*)/sam/(.+)\.sam$'), r'\1/bam/\2.bam')
 def sam_to_bam(input_file, output_file):
     '''Convert SAM files to BAM files.'''
@@ -93,7 +92,7 @@ def sam_to_bam(input_file, output_file):
     call(sam_cmd, cmd_dict)
 
 # Sort BAM file
-@follows(sam_to_bam, mkdir('sorted'))
+@follows(mkdir('sorted'))
 @transform(sam_to_bam, regex(r'^(.*)/bam/(.+)\.bam$'), r'\1/sorted/\2.sorted.bam')
 def sort_bam(input_file, output_file):
     '''Sort BAM files by coordinate.'''
@@ -111,7 +110,7 @@ def sort_bam(input_file, output_file):
     call(picard_cmd, cmd_dict)
 
 # Remove duplicates
-@follows(sort_bam, mkdir('deduped'))
+@follows(mkdir('deduped'))
 @transform(sort_bam, regex(r'^(.*)/sorted/(.*)\.sorted\.bam$'),
         r'\1/deduped/\2.deduped.bam')
 def remove_duplicates(input_file, output_file):
@@ -131,7 +130,7 @@ def remove_duplicates(input_file, output_file):
     call(picard_cmd, cmd_dict)
 
 # Update header with missing data
-@follows(remove_duplicates, mkdir('prepped'))
+@follows(mkdir('prepped'))
 @transform(remove_duplicates, regex(r'^(.*)/deduped/(.*)\.deduped\.bam$'), r'\1/prepped/\2.prepped.bam')
 def fix_header(input_file, output_file):
     '''Fix header info'''
@@ -155,7 +154,6 @@ def fix_header(input_file, output_file):
     os.remove(cmd_dict['header_tmp'])
 
 # Create index from BAM - creates BAI files
-@follows(fix_header)
 @transform(fix_header, regex(r'^(.*)/prepped/(.*)\.bam'), r'\1/prepped/\2.bam.bai')
 def bam_index(input_file, output_file):
     '''Index BAM file and create a BAI file.'''
