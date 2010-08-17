@@ -36,13 +36,6 @@ def copy_sequences(input_file, output_file):
     pmsg('Compressing file', cmd_dict['outfile_prefix'], cmd_dict['outfile'])
     zip(cmd_dict['outfile_prefix'])
 
-# Convert fastq to sai
-def fastq_to_sai_generator():
-    cwd = os.getcwd()
-    for file in glob('%s/fastq/*' % cwd):
-        filename = '%s/sai/%s' % (cwd, paired_strings['sai'] % paired_re.search(file).groupdict())
-        yield [file, filename]
-
 @jobs_limit(2)
 @follows(copy_sequences, mkdir('sai'))
 @transform(copy_sequences, regex(r'^(.*)/fastq/(.*)\.fastq\.gz$'), r'\1/sai/\2.sai')
