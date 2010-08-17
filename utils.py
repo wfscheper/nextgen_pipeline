@@ -23,6 +23,7 @@ CMD_DICT = {
     'genome': '../resources/human_g1k_v37.fasta',
     'header_template': '../resources/header.template',
     'primers': '../resources/ceph_raindance_1_primers_hg19.bed',
+    'se_target': '../resources/ceph_target_regions_hg19.interval_list',
     # filters
     'standard_filter': '\"QUAL < 30.0 || AB > 0.75 && DP > 40 || QD < 5.0 || HRun > 5 || ' + \
         'SB > -0.10\"',
