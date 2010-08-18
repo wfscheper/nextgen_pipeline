@@ -154,22 +154,27 @@ def fix_header(input_file, output_file):
     os.remove(cmd_dict['header_tmp'])
 
 # Create index from BAM - creates BAI files
-@transform(fix_header, regex(r'^(.*)/prepped/(.*)\.bam'), r'\1/prepped/\2.bam.bai')
+@transform(fix_header, regex(r'^(.*)/prepped/(.+)\.bam'), r'\1/prepped/\2.bam.bai')
 def bam_index(input_file, output_file):
     '''Index BAM file and create a BAI file.'''
     pmsg('Create BAM Index', input_file, output_file)
     cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
-    sam_cmd = '%(samtools)s index %(infile)s'
-    call(sam_cmd, cmd_dict)
+    picard_cmd = '%(picard)s BuildBamIndex ' + \
+            'I=%(infile)s ' + \
+            'O=%(outfile)s ' + \
+            'MAX_RECORDS_IN_RAM=7500000 ' + \
+            'OVERWRITE=true ' + \
+            'VALIDATION_STRINGENCY=SILENT'
+    call(picard_cmd, cmd_dict)
 
 @follows(mkdir('coverage'))
-@transform(fix_header, regex(r'^(.*)/prepped/(.+)\.prepped\.bam$'), r'\1/coverage/\2.coverage')
+@transform(bam_index, regex(r'^(.*)/prepped/(.+)\.prepped\.bam\.bai$'), r'\1/coverage/\2.coverage')
 def calculate_coverage(input_file, output_file):
     '''Calculate coverage statistics'''
     cmd_dict = CMD_DICT.copy()
-    cmd_dict['infile'] = input_file
+    cmd_dict['infile'] = os.path.splitext(input_file)[0]
     cmd_dict['outfile'] = output_file
     pmsg('Coverage calculations', cmd_dict['infile'], cmd_dict['outfile'])
     gatk_cmd = '%(gatk)s -T DepthOfCoverage ' + \
