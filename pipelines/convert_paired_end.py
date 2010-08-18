@@ -138,9 +138,8 @@ def fix_header(input_file, output_file):
     cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
-    cmd_dict['read_group'] = os.path.split(input_file)[1].rstrip('.deduped.bam')
-    cmd_dict.update(read_group_re.match(cmd_dict['read_group']).groupdict())
-    cmd_dict['header_tmp'] = cmd_dict['header_tmp'] % cmd_dict
+    cmd_dict.update(read_group_re.match(input_file).groupdict())
+    cmd_dict['header_tmp'] = '/tmp/header_%(read_group)s_%(lane)s' % cmd_dict
     open(cmd_dict['header_tmp'], 'w').write(
         open(cmd_dict['header_template'], 'r').read() % cmd_dict
     )
