@@ -69,7 +69,7 @@ def pmsg(msg, input, output):
         'in': input,
         'out': output,
     }
-    print 'Running %(msg)s with input %(in)s and output %(out)s' % msgs
+    print '%(msg)s with input %(in)s and output %(out)s' % msgs
 
 def call(command, command_dict, is_logged=True):
     command_line = command % command_dict
