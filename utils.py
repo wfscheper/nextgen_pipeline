@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 import subprocess
 
@@ -70,11 +71,18 @@ def pmsg(msg, input, output):
     }
     print 'Running %(msg)s with input %(in)s and output %(out)s' % msgs
 
-def call(command, command_dict):
+def call(command, command_dict, is_logged=True):
     command_line = command % command_dict
     logger.debug('Calling command line: %s' % command_line)
-    if DEBUG: command_line = DEBUG_COMMAND % command_dict
-    subprocess.call(command_line, shell=True)
+    if DEBUG:
+        command_line = DEBUG_COMMAND % command_dict
+    if is_logged:
+        logfile = os.path.split(command_dict['outfile'])[-1]
+        logfile = os.path.join('logs', logfile)
+        subprocess.call(command_line, stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
+                        shell=True)
+    else:
+        subprocess.call(command_line, shell=True)
 
 def saicmp(x,y):
     '''Compare function for moving sai files to front of list'''
