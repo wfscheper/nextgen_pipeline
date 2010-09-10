@@ -11,13 +11,14 @@ import os
 from glob import iglob as glob
 from ruffus import files, follows, inputs, mkdir, regex, transform
 
-from utils import call, jobs_limit, pmsg, unpaired_re, unpaired_strings, CMD_DICT
+from utils import call, pmsg, unpaired_re, unpaired_strings, CMD_DICT
 
 
 @jobs_limit(1)
 def clean_up():
-    print 'Cleaning up intermeidate files'
-    call('rm -rf bam/ clipped/ dedupped/ sam/ sorted/', {})
+    '''Clean up intermediate files'''
+    print 'Cleaning up intermeidate files: bam/ clipped/ deduped/ sam/ sorted/'
+    call('rm -rf bam/ clipped/ deduped/ sam/ sorted/', {}, is_logged=False)
 
 # Calculate Covariates for Quality Score Recalibration
 def count_covariates_generator():
@@ -131,13 +132,13 @@ def fix_mate_realigned(input_file, output_file):
             'I=%(infile)s ' + \
             'O=%(outfile)s ' + \
             'SO=coordinate ' + \
-            'MAX_RECORDS_IN_RAM=7500000 ' + \
             'VALIDATION_STRINGENCY=SILENT'
     call(picard_cmd, cmd_dict)
     samtools_cmd = '%(samtools)s index %(outfile)s'
     call(samtools_cmd, cmd_dict)
 
 stages_dict = {
+    'clean_up': clean_up,
     'count_covariates': sorted_count_covariates,
     'recalibrate_quality': recalibrate_quality_scores,
     'recount_covariates': recal_count_covariates,
