@@ -17,8 +17,8 @@ from utils import call, pmsg, unpaired_re, unpaired_strings, CMD_DICT
 @jobs_limit(1)
 def clean_up():
     '''Clean up intermediate files'''
-    print 'Cleaning up intermeidate files: bam/ clipped/ deduped/ sam/ sorted/'
-    call('rm -rf bam/ clipped/ deduped/ sam/ sorted/', {}, is_logged=False)
+    print('Cleaning up intermeidate files: bam/, clipped/, deduped/, header/, sam/, sorted/')
+    call('rm -rf bam/ clipped/ deduped/ header/ sam/ sorted/', {}, is_logged=False)
 
 # Calculate Covariates for Quality Score Recalibration
 def count_covariates_generator():
