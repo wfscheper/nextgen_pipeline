@@ -65,7 +65,7 @@ def recalibrate_quality_scores(input_files, output_file):
             '-R %(genome)s ' + \
             '-I %(bam)s ' + \
             '-recalFile %(recal_data)s ' + \
-            '-outputBam %(outfile)s'
+            '-o %(outfile)s'
     call(gatk_cmd, cmd_dict)
     samtools_cmd = '%(samtools)s index %(outfile)s'
     call(samtools_cmd, cmd_dict)
