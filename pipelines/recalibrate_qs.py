@@ -50,9 +50,10 @@ def sorted_count_covariates(input_file, output_file):
 
 # Apply Quality Score Recalibration
 @follows(mkdir('recalibrated'))
-@transform(sorted_count_covariates, regex(r'^(.*)/recal_data/(.*).prepped.csv$'),
-        inputs([r'\1/recal_data/\2.prepped.csv', r'\1/prepped/\2.prepped.bam']),
-        r'\1/recalibrated/\2.recalibrated.bam')
+@transform(sorted_count_covariates,
+           regex(r'^(.*)/recal_data/(.*).prepped.csv$'),
+           inputs([r'\1/recal_data/\2.prepped.csv', r'\1/prepped/\2.prepped.bam']),
+           r'\1/recalibrated/\2.recalibrated.bam')
 def recalibrate_quality_scores(input_files, output_file):
     '''Apply Recalibrated QSs to BAM file'''
     cmd_dict = CMD_DICT.copy()
