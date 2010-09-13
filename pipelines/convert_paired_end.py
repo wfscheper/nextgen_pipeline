@@ -159,7 +159,7 @@ def tag_reads(input_file, output_file):
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     cmd_dict['samfile'] = os.path.splitext(output_file)[0] + '.sam'
-    cmd_dict['read_group'] = read_group_re.match(input_file).groupdict()['read_group']
+    cmd_dict.update(read_group_re.match(input_file).groupdict())
     pmsg('Tagging reads', input_file, output_file)
     command = '%(samtools)s view -h %(infile)s | ' + \
             'sed "/^[^@]/s|$|\tPG:Z:bwa\tRG:Z:%(read_group)s|" > %(samfile)s'
