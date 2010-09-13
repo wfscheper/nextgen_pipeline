@@ -84,3 +84,4 @@
 @SQ	SN:GL000225.1	LN:211173	UR:file:/usr/local/share/nextgen_resources/human_g1k_v37.fasta	AS:human_g1k_v37	M5:63945c3e6962f28ffd469719a747e73c	SP:homo_sapiens
 @SQ	SN:GL000192.1	LN:547496	UR:file:/usr/local/share/nextgen_resources/human_g1k_v37.fasta	AS:human_g1k_v37	M5:325ba9e808f669dfeee210fdd7b470ac	SP:homo_sapiens
 @RG	ID:%(read_group)s	SM:%(sample)s	LB:%(read_group)s	PU:%(run_barcode)s.%(lane)s	PL:illumina
+@PG	ID:bwa	VN:0.5.7
