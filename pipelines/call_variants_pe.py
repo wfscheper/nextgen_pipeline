@@ -13,6 +13,12 @@ from ruffus import files, follows, inputs, mkdir, regex, transform
 from utils import CMD_DICT, call, pmsg, unpaired_re, unpaired_strings
 
 
+@jobs_limit(1)
+def clean_up():
+    print 'Cleaning up intermeidate files: indel_intervals/ prepped/ realigned/ ' + \
+            'recal_data/ recalibrated/'
+    call('rm -rf indel_intervals/ prepped/ realigned/ recal_data/ recalibrated/', {})
+
 def indel_genoytping_generator():
     cwd = os.getcwd()
     for infile in glob('%s/realigned_fixmate/*.bam' % cwd):
@@ -23,7 +29,7 @@ def indel_genoytping_generator():
         yield [infile, '%s/indels/%s' % (cwd, details_file), '%s/indels/%s' % (cwd, raw_file)]
 
 # Call Indels
-@follows(mkdir('indels'))
+@follows(clean_up, mkdir('indels'))
 @files(indel_genoytping_generator)
 def indel_genotyping(input_file, details_file, raw_file):
     '''Call Indels'''
@@ -49,7 +55,7 @@ def snp_genoytping_generator():
                 unpaired_re.search(infile).groupdict()
         yield [infile, '%s/snps/%s' % (cwd, outfile)]
 
-@follows(mkdir('snps'))
+@follows(clean_up, mkdir('snps'))
 @files(snp_genoytping_generator)
 def snp_genotyping(input_file, output_file):
     '''Call SNP variants'''
@@ -129,6 +135,7 @@ def filter_snps(input_files, output_file):
     call(gatk_cmd, cmd_dict)
 
 stages_dict = {
+    'clean_up': 'clean_up',
     'indel_genotyping': indel_genotyping,
     'filter_indels': filter_indels,
     'snp_genotyping': snp_genotyping,
