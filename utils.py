@@ -10,14 +10,14 @@ DEBUG = False
 CMD_DICT = {
     'threads': '4',
     # commands
-    'bwa': '/usr/local/bin/bwa',
-    'clip_reads': '/usr/local/bin/clip_se_reads.py',
-    'filterIndels': '/usr/local/bin/filterSingleSampleCalls.pl',
-    'gatk': '/usr/local/bin/gatk.sh',
-    'makeIndelMask': '/usr/bin/env python /usr/local/bin/makeIndelMask.py',
-    'picard': '/usr/local/bin/picard.sh',
-    'sampl': '/usr/bin/perl /usr/local/bin/samtools.pl',
-    'samtools': '/usr/local/bin/samtools',
+    'bwa': '`which bwa`',
+    'clip_reads': '`which clip_se_reads.py`',
+    'filterIndels': '`which filterSingleSampleCalls.pl`',
+    'gatk': '`which gatk.sh`',
+    'makeIndelMask': '/usr/bin/env python `which makeIndelMask.py`',
+    'picard': '`which picard.sh`',
+    'sampl': '/usr/bin/perl `which samtools.pl`',
+    'samtools': '`which samtools`',
     # data files
     'dbsnp': '../resources/dbsnp_130_b37.rod',
     'exome': '../resources/hg19_capture.interval_list',
