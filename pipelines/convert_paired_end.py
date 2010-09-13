@@ -160,7 +160,7 @@ def tag_reads(input_file, output_file):
     cmd_dict['read_group'] = read_group_re.match(input_file).groupdict()['read_group']
     pmsg('Tagging reads', input_file, output_file)
     command = '%(samtools)s view -h %(infile)s | ' + \
-            'sed "/^[^@].*XT:/s|$|\tRG:Z:%(read_group)s|" > %(samfile)s'
+            'sed "/^[^@]/s|$|\tPG:Z:bwa\tRG:Z:%(read_group)s|" > %(samfile)s'
     call(command, cmd_dict, is_logged=False)
     pmsg('Compressing SAM file', cmd_dict['samfile'], output_file)
     command = '%(picard)s SamFormatConverter ' + \
