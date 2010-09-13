@@ -32,11 +32,13 @@ def copy_sequence(input_file, output_file):
     cmd_dict['outfile'] = output_file
     cmd_dict['outfile_prefix'] = output_file.rstrip('.gz')
     pmsg('Copying sequence files', input_file, cmd_dict['outfile_prefix'])
-    SeqIO.convert(cmd_dict['infile'], 'fastq-illumina', cmd_dict['outfile_prefix'], 'fastq-sanger')
+    try:
+        SeqIO.convert(cmd_dict['infile'], 'fastq-illumina', cmd_dict['outfile_prefix'], 'fastq-sanger')
+    except ValueError:
+        call('cp %(infile)s %(outfile_prefix)s', cmd_dict, is_logged=False)
     pmsg('Compressing file', cmd_dict['outfile_prefix'], cmd_dict['outfile'])
     zip(cmd_dict['outfile_prefix'])
 
-@jobs_limit(2)
 @follows(mkdir('sai'), mkdir('logs'))
 @transform(copy_sequence, regex(r'^fastq/(.+)\.fastq\.gz$'), r'sai/\1.sai')
 def fastq_to_sai(input_file, output_file):
