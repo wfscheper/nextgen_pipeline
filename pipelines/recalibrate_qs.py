@@ -113,7 +113,7 @@ def local_realignment(input_files, output_file):
             '-D %(dbsnp)s ' + \
             '-I %(recalibrated)s ' + \
             '-targetIntervals %(indel_intervals)s ' + \
-            '--output %(outfile)s'
+            '-o %(outfile)s'
     call(gatk_cmd, cmd_dict)
     samtools_cmd = '%(samtools)s index %(outfile)s'
     call(samtools_cmd, cmd_dict)
