@@ -61,13 +61,13 @@ def snp_genotyping(input_file, output_file):
     cmd_dict['outfile'] = output_file
     pmsg('SNP Genotyping', cmd_dict['infile'], cmd_dict['outfile'])
     gatk_cmd = '%(gatk)s ' + \
-            '-T UnifiedGenotyper ' + \
-            '-R %(genome)s ' + \
-            '-D %(dbsnp)s ' + \
-            '-L %(exome)s ' + \
-            '-I %(infile)s ' + \
-            '-varout %(outfile)s ' + \
-            '-stand_call_conf 30.0'
+            '--analysis_type UnifiedGenotyper ' + \
+            '--reference_sequence %(genome)s ' + \
+            '--DBSNP %(dbsnp)s ' + \
+            '--intervals %(exome)s ' + \
+            '--input_file %(infile)s ' + \
+            '--out %(outfile)s ' + \
+            '--standard_min_confidence_threshold_for_calling 30.0'
     call(gatk_cmd, cmd_dict)
 
 # Filter Indels
@@ -120,17 +120,17 @@ def filter_snps(input_files, output_file):
     cmd_dict['outfile'] = output_file
     pmsg('Filter SNPs', ', '.join(input_files), cmd_dict['outfile'])
     gatk_cmd = '%(gatk)s ' + \
-            '-T VariantFiltration ' + \
-            '-R %(genome)s ' + \
-            '-o %(outfile)s ' + \
-            '-B variant,VCF,%(snpfile)s ' + \
-            '-B mask,Bed,%(maskfile)s ' + \
+            '--analysis_type VariantFiltration ' + \
+            '--reference_sequence %(genome)s ' + \
+            '--out %(outfile)s ' + \
+            '--rodBind variant,VCF,%(snpfile)s ' + \
+            '--rodBind mask,Bed,%(maskfile)s ' + \
             '--maskName InDel ' + \
             '--clusterWindowSize 10 ' + \
             '--filterExpression %(standard_filter)s ' + \
             '--filterName \"StandardFilter\" ' + \
             '--filterExpression %(hard_to_validate_filter)s ' + \
-            '--filterName \"HardToValidateFilter\" '
+            '--filterName \"HardToValidateFilter\"'
     call(gatk_cmd, cmd_dict)
 
 stages_dict = {
