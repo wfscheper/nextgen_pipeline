@@ -39,7 +39,6 @@ parser.add_option('-p', '--pipeline', dest='pipeline', default=None, help='pipel
 parser.add_option('-s', '--stage', dest='stage', help='stage of pipeline to run')
 parser.add_option('-t', '--threads', action='store', type='int', dest='threads',
                   default=0, help='number of threads to use')
-parser.add_option('-f', '--force', action='store_true', dest='force_run', 
 parser.add_option('-j', '--jobs', action='store', type='int', dest='jobs',
                   default=0, help='number of jobs to use')
 parser.add_option('-f', '--force', action='store_true', dest='force_run',
