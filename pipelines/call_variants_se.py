@@ -22,6 +22,13 @@ def indel_genoytping_generator():
                 unpaired_re.search(infile).groupdict()
         yield [infile, '%s/indels/%s' % (cwd, details_file), '%s/indels/%s' % (cwd, raw_file)]
 
+def snp_genoytping_generator():
+    cwd = os.getcwd()
+    for infile in glob('%s/realigned_fixmate/*.bam' % cwd):
+        outfile = '%(line)s_s_%(lane)s_snps.raw.vcf' % \
+                unpaired_re.search(infile).groupdict()
+        yield [infile, '%s/snps/%s' % (cwd, outfile)]
+
 # Call Indels
 @follows(mkdir('indels'))
 @files(indel_genoytping_generator)
@@ -42,13 +49,6 @@ def indel_genotyping(input_file, details_file, raw_file):
     call(gatk_cmd, cmd_dict)
 
 # Call SNPs
-def snp_genoytping_generator():
-    cwd = os.getcwd()
-    for infile in glob('%s/realigned_fixmate/*.bam' % cwd):
-        outfile = '%(line)s_s_%(lane)s_snps.raw.vcf' % \
-                unpaired_re.search(infile).groupdict()
-        yield [infile, '%s/snps/%s' % (cwd, outfile)]
-
 @follows(mkdir('snps'))
 @files(snp_genoytping_generator)
 def snp_genotyping(input_file, output_file):

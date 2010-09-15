@@ -16,7 +16,6 @@ from zipper import zip
 from utils import call, unpaired_re, pmsg, read_group_re, saicmp, CMD_DICT
 
 
-# Copy sequence from staging area
 def copy_sequence_generator():
     cwd = os.getcwd()
     for infile in glob('./staging_area/*'):
@@ -24,6 +23,7 @@ def copy_sequence_generator():
                 unpaired_re.search(infile).groupdict()
         yield [infile, '%s/fastq/%s' % (cwd, outfile)]
 
+# Copy sequence from staging area
 @follows(mkdir('fastq'))
 @files(copy_sequence_generator)
 def copy_sequence(input_file, output_file):

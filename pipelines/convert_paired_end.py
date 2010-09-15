@@ -15,13 +15,13 @@ from zipper import zip
 from utils import call, paired_re, paired_strings, pmsg, read_group_re, saicmp, CMD_DICT
 
 
-# Copy sequence from staging area
 def copy_sequence_generator():
     for file in glob('staging_area/*'):
         filename = '%(line)s_s_%(lane)s_%(pair)s_sequence.fastq.gz' % \
                 paired_re.search(file).groupdict()
         yield [file, 'fastq/%s' % (filename)]
 
+# Copy sequence from staging area
 @follows(mkdir('fastq'))
 @files(copy_sequence_generator)
 @jobs_limit(2)

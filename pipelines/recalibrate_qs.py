@@ -14,13 +14,6 @@ from ruffus import files, follows, inputs, mkdir, regex, transform
 from utils import call, pmsg, unpaired_re, unpaired_strings, CMD_DICT
 
 
-@jobs_limit(1)
-def clean_up():
-    '''Clean up intermediate files'''
-    print('Cleaning up intermeidate files: bam/, clipped/, deduped/, header/, sam/, sorted/')
-    call('rm -rf bam/ clipped/ deduped/ header/ sam/ sorted/', {}, is_logged=False)
-
-# Calculate Covariates for Quality Score Recalibration
 def count_covariates_generator():
     cwd = os.getcwd()
     for file in glob('%s/prepped/*.bam' % cwd):
@@ -42,6 +35,13 @@ def count_covariates(input_file, output_file):
             '-standard '
     call(gatk_cmd, cmd_dict)
 
+@jobs_limit(1)
+def clean_up():
+    '''Clean up intermediate files'''
+    print('Cleaning up intermeidate files: bam/, clipped/, deduped/, header/, sam/, sorted/')
+    call('rm -rf bam/ clipped/ deduped/ header/ sam/ sorted/', {}, is_logged=False)
+
+# Calculate Covariates for Quality Score Recalibration
 @follows(clean_up, mkdir('recal_data'))
 @files(count_covariates_generator)
 def sorted_count_covariates(input_file, output_file):
