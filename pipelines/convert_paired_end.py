@@ -61,14 +61,14 @@ def fastq_to_sai(input_file, output_file):
 def paired_ends_to_sam(input_files, output_file):
     '''Convert SAI files and FASTQ files to SAM files.'''
 
-    def saicmp(x,y):
+    def saicmp(x, y):
         '''Compare function for moving sai files to front of list'''
         if x.endswith('sai') and not y.endswith('sai'):
-            return -1
+            return - 1
         elif y.endswith('sai') and not x.endswith('sai'):
             return 1
         else:
-            return cmp(x,y)
+            return cmp(x, y)
 
     cmd_dict = CMD_DICT.copy()
     assert type(input_files) is type([])

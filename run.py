@@ -48,7 +48,7 @@ parser.add_option('--graph', dest='print_graph', default=False, action='store_tr
 if __name__ == '__main__':
     pipeline_stages = {}
     (options, args) = parser.parse_args()
-    
+
     # get number of cpus on machine
     ncpus = multiprocessing.cpu_count()
 
@@ -77,7 +77,7 @@ if __name__ == '__main__':
         else:
             # user did not specify a stage, use default
             start_stage = pipeline_stages[options.pipeline]['default']
-        
+
         # user specified thread count, capped at the number of cpus
         if options.threads:
             NUM_JOBS = options.threads if options.threads <= ncpus else ncpus

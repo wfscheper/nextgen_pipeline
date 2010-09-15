@@ -134,7 +134,7 @@ def filter_snps(input_files, output_file):
     call(gatk_cmd, cmd_dict)
 
 stages_dict = {
-    'clean_up': 'clean_up',
+    'clean_up': clean_up,
     'indel_genotyping': indel_genotyping,
     'filter_indels': filter_indels,
     'snp_genotyping': snp_genotyping,

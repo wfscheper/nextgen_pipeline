@@ -52,6 +52,19 @@ unpaired_strings = {
 
 logger = logging.getLogger('main')
 
+def call(command, command_dict, is_logged=True):
+    command_line = command % command_dict
+    logger.debug('Calling command line: %s' % command_line)
+    if DEBUG:
+        command_line = DEBUG_COMMAND % command_dict
+    if is_logged:
+        logfile = os.path.split(command_dict['outfile'])[-1]
+        logfile = os.path.join('logs', logfile)
+        subprocess.call(command_line, stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
+                        shell=True)
+    else:
+        subprocess.call(command_line, shell=True)
+
 def check_if_clean(input_files, output_files):
     '''Check if intermediate files from previous pipeline are still around'''
     for file in input_files:
@@ -78,25 +91,12 @@ def pmsg(msg, input, output):
     }
     print '%(msg)s with input %(in)s and output %(out)s' % msgs
 
-def call(command, command_dict, is_logged=True):
-    command_line = command % command_dict
-    logger.debug('Calling command line: %s' % command_line)
-    if DEBUG:
-        command_line = DEBUG_COMMAND % command_dict
-    if is_logged:
-        logfile = os.path.split(command_dict['outfile'])[-1]
-        logfile = os.path.join('logs', logfile)
-        subprocess.call(command_line, stdout=open(logfile, 'w'), stderr=subprocess.STDOUT,
-                        shell=True)
-    else:
-        subprocess.call(command_line, shell=True)
-
-def saicmp(x,y):
+def saicmp(x, y):
     '''Compare function for moving sai files to front of list'''
     if x.endswith('sai') and not y.endswith('sai'):
-        return -1
+        return - 1
     elif y.endswith('sai') and not x.endswith('sai'):
         return 1
     else:
-        return cmp(x,y)
+        return cmp(x, y)
 

@@ -20,7 +20,7 @@ def count_covariates_generator():
                 unpaired_re.search(file).groupdict())
         yield [file, filename]
 
-def count_covariates(input_file, output_file):
+def call_count_covariates(input_file, output_file):
     cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
@@ -43,11 +43,11 @@ def clean_up(input_files, output_file):
     call('rm -rf %s' % " ".join(input_files), {}, is_logged=False)
 
 # Calculate Covariates for Quality Score Recalibration
-@follows(clean_up, mkdir('recal_data'))
+@follows(clean_up, mkdir('covariates'))
 @files(count_covariates_generator)
-def sorted_count_covariates(input_file, output_file):
+def count_covariates(input_file, output_file):
     '''Run CounCovariates on files in sorted/'''
-    count_covariates(input_file, output_file)
+    call_count_covariates(input_file, output_file)
 
 # Apply Quality Score Recalibration
 @follows(mkdir('recalibrated'))
@@ -76,8 +76,9 @@ def recalibrate_quality_scores(input_files, output_file):
 @transform(recalibrate_quality_scores,
            regex(r'^recalibrated/(.+).recalibrated.bam$'),
            r'covariates/\1.recalibrated.csv')
+def recount_covariates(input_file, output_file):
     '''Run CountCovariates on files in recalibrated/'''
-    count_covariates(input_file, output_file)
+    call_count_covariates(input_file, output_file)
 
 # Find candidate intervals for realignment
 @follows(recount_covariates, mkdir('intervals'))
@@ -144,12 +145,12 @@ def fix_mate_realigned(input_file, output_file):
 
 stages_dict = {
     'clean_up': clean_up,
-    'count_covariates': sorted_count_covariates,
-    'recalibrate_quality': recalibrate_quality_scores,
-    'recount_covariates': recal_count_covariates,
-    'create_intervals': create_intervals,
-    'local_realignment': local_realignment,
-    'fix_mate_realigned': fix_mate_realigned,
+    'count': count_covariates,
+    'recalibrate': recalibrate_quality_scores,
+    'recount': recount_covariates,
+    'intervals': create_intervals,
+    'realignment': local_realignment,
+    'fixmate': fix_mate_realigned,
     'default': fix_mate_realigned,
 }
 
