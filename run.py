@@ -40,6 +40,9 @@ parser.add_option('-s', '--stage', dest='stage', help='stage of pipeline to run'
 parser.add_option('-t', '--threads', action='store', type='int', dest='threads',
                   default=0, help='number of threads to use')
 parser.add_option('-f', '--force', action='store_true', dest='force_run', 
+parser.add_option('-j', '--jobs', action='store', type='int', dest='jobs',
+                  default=0, help='number of jobs to use')
+parser.add_option('-f', '--force', action='store_true', dest='force_run',
                   default=False, help='Force pipeline to run stage')
 parser.add_option('-l', '--log', dest='log', default=None, help='path to log file')
 parser.add_option('--graph', dest='print_graph', default=False, action='store_true',
@@ -79,10 +82,10 @@ if __name__ == '__main__':
             start_stage = pipeline_stages[options.pipeline]['default']
 
         # user specified thread count, capped at the number of cpus
-        if options.threads:
-            NUM_JOBS = options.threads if options.threads <= ncpus else ncpus
+        if options.jobs:
+            NUM_JOBS = options.jobs if options.jobs <= ncpus else ncpus
         else:
-            NUM_JOBS = ncpus/2
+            NUM_JOBS = ncpus / 2
 
         # user speicified log file
         if options.log:
