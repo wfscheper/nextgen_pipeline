@@ -72,13 +72,13 @@ def paired_ends_to_sam(input_files, output_file):
 
     cmd_dict = CMD_DICT.copy()
     assert type(input_files) is type([])
-    pmsg('Generating SAM file', ', '.join(input_files), output_file.strip('.gz'))
+    pmsg('Generating SAM file', ', '.join(input_files), output_file)
     # sort input files
     input_files.sort(cmp=saicmp)
     # Run bwa to merge paired ends into SAM file
     cmd_dict['infiles'] = ' '.join(input_files)
-    cmd_dict['outfile'] = output_file.strip('.gz')
-    bwa_cmd = '%(bwa)s sampe %(genome)s %(infiles)s > %(outfile)s'
+    cmd_dict['outfile'] = output_file
+    bwa_cmd = '%(bwa)s sampe -f %(outfile)s %(genome)s %(infiles)s'
     call(bwa_cmd, cmd_dict)
 
 ## Convert filtered SAM files to BAM files
