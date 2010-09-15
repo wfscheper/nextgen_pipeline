@@ -17,7 +17,7 @@ from utils import call, paired_re, paired_strings, pmsg, read_group_re, saicmp, 
 
 def copy_sequence_generator():
     for file in glob('staging_area/*'):
-        filename = '%(line)s_s_%(lane)s_%(pair)s_sequence.fastq.gz' % \
+        filename = '%(line)s_s_%(lane)s_%(pair)s.fastq.gz' % \
                 paired_re.search(file).groupdict()
         yield [file, 'fastq/%s' % (filename)]
 
@@ -52,11 +52,11 @@ def fastq_to_sai(input_file, output_file):
 
 # Merge paired ends to SAM
 @follows(mkdir('sam'))
-@transform(fastq_to_sai, regex(r'^sai/(\w+)_s_(\d+)_1_sequence\.sai$'),
-           inputs([r'sai/\1_s_\2_2_sequence.sai',
-                   r'sai/\1_s_\2_1_sequence.sai',
-                   r'fastq/\1_s_\2_1_sequence.fastq.gz',
-                   r'fastq/\1_s_\2_2_sequence.fastq.gz']),
+@transform(fastq_to_sai, regex(r'^sai/(\w+)_s_(\d+)_1\.sai$'),
+           inputs([r'sai/\1_s_\2_2.sai',
+                   r'sai/\1_s_\2_1.sai',
+                   r'fastq/\1_s_\2_1.fastq.gz',
+                   r'fastq/\1_s_\2_2.fastq.gz']),
             r'sam/\1_s_\2.sam')
 def paired_ends_to_sam(input_files, output_file):
     '''Convert SAI files and FASTQ files to SAM files.'''
