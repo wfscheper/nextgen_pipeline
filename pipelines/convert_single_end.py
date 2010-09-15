@@ -134,12 +134,8 @@ def fix_header(input_file, output_file):
             'VALIDATION_STRINGENCY=SILENT'
     call(picard_cmd, cmd_dict)
     os.remove(cmd_dict['header_tmp'])
-    pmsg('Index BAM', cmd_dict['infile'], cmd_dict['outfile'])
-    picard_cmd = '%(picard)s BuildBamIndex ' + \
-            'I=%(outfile)s ' + \
-            'O=%(outfile)s.bai ' + \
-            'OVERWRITE=true'
-    call(picard_cmd, cmd_dict)
+    samtools_cmd = '%(samtools)s index %(outfile)s'
+    call(samtools_cmd, cmd_dict)
 
 @follows(mkdir('coverage'))
 @transform(bam_index, regex(r'^prepped/(.+)\.prepped\.bam\.bai$'), r'coverage/\1.coverage')
