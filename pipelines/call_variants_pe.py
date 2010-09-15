@@ -8,47 +8,47 @@ import re
 import os
 
 from glob import iglob as glob
-from ruffus import files, follows, inputs, mkdir, regex, transform
+from ruffus import check_if_uptodate, files, follows, inputs, jobs_limit, mkdir, regex, transform
 
-from utils import CMD_DICT, call, pmsg, unpaired_re, unpaired_strings
+from utils import CMD_DICT, call, check_if_clean, pmsg, unpaired_re, unpaired_strings
 
 
 def indel_genoytping_generator():
-    for infile in glob('realigned_fixmate/*.bam'):
+    for infile in glob('fixmate/*.bam'):
         raw_file = '%(line)s_s_%(lane)s.indels_raw.vcf' % \
                 unpaired_re.search(infile).groupdict()
         yield [infile, 'indels/%s' % (raw_file)]
 
 def snp_genoytping_generator():
-    for infile in glob('realigned_fixmate/*.bam'):
+    for infile in glob('fixmate/*.bam'):
         outfile = '%(line)s_s_%(lane)s.snps_raw.vcf' % \
                 unpaired_re.search(infile).groupdict()
         yield [infile, 'snps/%s' % (outfile)]
 
 @jobs_limit(1)
-def clean_up():
-    print('Cleaning up intermeidate files: indel_intervals/ prepped/ realigned/ ' + \
-            'recal_data/ recalibrated/')
-    call('rm -rf indel_intervals/ prepped/ realigned/ recal_data/ recalibrated/', {},
-         is_logged=False)
+@files(["intervals/", "prepped/", "realigned/", "recalibrated/"], None)
+@check_if_uptodate(check_if_clean)
+def clean_up(input_files, output_file):
+    print('Cleaning up intermeidate files: %s' % ", ".join(input_files))
+    call('rm -rf %s' % " ".join(input_files), {}, is_logged=False)
 
 # Call Indels
 @follows(clean_up, mkdir('indels'))
 @files(indel_genoytping_generator)
-def indel_genotyping(input_file, details_file, raw_file):
+def indel_genotyping(input_file, output_file):
     '''Call Indels'''
     cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
-    cmd_dict['detailsfile'] = details_file
-    cmd_dict['outfile'] = raw_file
-    pmsg('Indel Genotyping', input_file, ', '.join([details_file, raw_file]))
+    cmd_dict['outfile'] = output_file
+    cmd_dict['outfile_bed'] = os.path.splitext(output_file)[0] + ".bed"
+    pmsg('Indel Genotyping', input_file, output_file)
     gatk_cmd = '%(gatk)s ' + \
-            '-T IndelGenotyperV2 ' + \
-            '-R %(genome)s ' + \
-            '-I %(infile)s ' + \
-            '-O %(outfile)s ' + \
-            '-o %(detailsfile)s ' + \
-            '--verbose'
+            '--analysis_type IndelGenotyperV2 ' + \
+            '--reference_sequence %(genome)s ' + \
+            '--intervals %(exome)s ' + \
+            '--input_file %(infile)s ' + \
+            '--out %(outfile)s ' + \
+            '--bedOutput %(outfile_bed)s'
     call(gatk_cmd, cmd_dict)
 
 # Call SNPs

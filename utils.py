@@ -52,6 +52,13 @@ unpaired_strings = {
 
 logger = logging.getLogger('main')
 
+def check_if_clean(input_files, output_files):
+    '''Check if intermediate files from previous pipeline are still around'''
+    for file in input_files:
+        if os.path.exists(file):
+            return True, "Need to clean out intermediate file: %s" % file
+    return False, "Intermediate files cleaned out"
+
 def log_info(func):
     def new_func(*args, **kwargs):
         logger.debug(func.__name__)

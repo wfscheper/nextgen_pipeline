@@ -9,9 +9,9 @@ Required for depth of coverage and variant calling.
 import os
 
 from glob import iglob as glob
-from ruffus import files, follows, inputs, mkdir, regex, transform
+from ruffus import check_if_uptodate, files, follows, inputs, jobs_limit, mkdir, regex, transform
 
-from utils import call, pmsg, unpaired_re, unpaired_strings, CMD_DICT
+from utils import call, check_if_clean, pmsg, unpaired_re, unpaired_strings, CMD_DICT
 
 
 def count_covariates_generator():
@@ -36,10 +36,12 @@ def count_covariates(input_file, output_file):
     call(gatk_cmd, cmd_dict)
 
 @jobs_limit(1)
-def clean_up():
+@files(["bam/", "clipped/", "deduped/", "header/", "sam/", "sorted/"], None)
+@check_if_uptodate(check_if_clean)
+def clean_up(input_files, output_file):
     '''Clean up intermediate files'''
-    print('Cleaning up intermeidate files: bam/, clipped/, deduped/, header/, sam/, sorted/')
-    call('rm -rf bam/ clipped/ deduped/ header/ sam/ sorted/', {}, is_logged=False)
+    print('Cleaning up intermeidate files: %s' % ", ".join(input_files))
+    call('rm -rf %s' % " ".join(input_files), {}, is_logged=False)
 
 # Calculate Covariates for Quality Score Recalibration
 @follows(clean_up, mkdir('recal_data'))
