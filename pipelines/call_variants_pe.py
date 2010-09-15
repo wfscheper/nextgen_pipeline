@@ -87,7 +87,7 @@ def filter_indels(input_file, output_file):
             '--max_cons_nqs_av_mm 0.5 ' + \
             '--mode ANNOTATE ' + \
             '> %(outfile)s'
-    call(filter_cmd, cmd_dict)
+    call(filter_cmd, cmd_dict, is_logged=False)
 
 # Create InDel mask
 @follows(filter_indels)
@@ -105,7 +105,7 @@ def create_indel_mask(input_file, output_file):
             '%(infile)s ' + \
             '10 ' + \
             '%(outfile)s'
-    call(python_cmd, cmd_dict)
+    call(python_cmd, cmd_dict, is_logged=False)
 
 # Filter SNPs
 @follows(snp_genotyping, create_indel_mask)
