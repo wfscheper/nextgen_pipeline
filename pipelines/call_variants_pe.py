@@ -15,9 +15,10 @@ from utils import CMD_DICT, call, pmsg, unpaired_re, unpaired_strings
 
 @jobs_limit(1)
 def clean_up():
-    print 'Cleaning up intermeidate files: indel_intervals/ prepped/ realigned/ ' + \
-            'recal_data/ recalibrated/'
-    call('rm -rf indel_intervals/ prepped/ realigned/ recal_data/ recalibrated/', {})
+    print('Cleaning up intermeidate files: indel_intervals/ prepped/ realigned/ ' + \
+            'recal_data/ recalibrated/')
+    call('rm -rf indel_intervals/ prepped/ realigned/ recal_data/ recalibrated/', {},
+         is_logged=False)
 
 def indel_genoytping_generator():
     cwd = os.getcwd()
