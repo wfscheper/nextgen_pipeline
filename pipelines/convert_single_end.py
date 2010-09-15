@@ -17,11 +17,10 @@ from utils import call, unpaired_re, pmsg, read_group_re, saicmp, CMD_DICT
 
 
 def copy_sequence_generator():
-    cwd = os.getcwd()
-    for infile in glob('./staging_area/*'):
+    for infile in glob('staging_area/*'):
         outfile = '%(line)s_s_%(lane)s.fastq.gz' % \
                 unpaired_re.search(infile).groupdict()
-        yield [infile, '%s/fastq/%s' % (cwd, outfile)]
+        yield [infile, 'fastq/%s' % (outfile)]
 
 # Copy sequence from staging area
 @follows(mkdir('fastq'))
@@ -44,7 +43,7 @@ def copy_sequence(input_file, output_file):
 
 @jobs_limit(2)
 @follows(mkdir('sai'))
-@transform(copy_sequence, regex(r'^(.*)/fastq/(.*)\.fastq\.gz$'), r'\1/sai/\2.sai')
+@transform(copy_sequence, regex(r'^fastq/(.+)\.fastq\.gz$'), r'sai/\1.sai')
 def align_sequence(input_file, output_file):
     '''Align sequence files to reference genome'''
     cmd_dict = CMD_DICT.copy()
@@ -55,10 +54,10 @@ def align_sequence(input_file, output_file):
     call(bwa_cmd, cmd_dict)
 
 @follows(mkdir('sam'))
-@transform(align_sequence, regex(r'^(.*)/sai/(.*)\.sai$'),
-        inputs([r'\1/fastq/\2.fastq.gz',
-            r'\1/sai/\2.sai']),
-        r'\1/sam/\2.sam')
+@transform(align_sequence,
+           regex(r'^sai/(.+)\.sai$'),
+           inputs([r'fastq/\1.fastq.gz', r'sai/\1.sai']),
+           r'sam/\1.sam')
 def create_sam(input_files, output_file):
     '''Convert fastq+sai files to sam file'''
     cmd_dict = CMD_DICT.copy()
@@ -73,7 +72,7 @@ def create_sam(input_files, output_file):
     call(bwa_cmd, cmd_dict)
 
 @follows(mkdir('sorted'))
-@transform(create_sam, regex(r'^(.*)/sam/(.*)\.sam$'), r'\1/sorted/\2.sorted.sam')
+@transform(create_sam, regex(r'^sam/(.+)\.sam$'), r'sorted/\1.sorted.sam')
 def coordinate_sort_sam(input_file, output_file):
     '''Sort SAM file by coordinates'''
     cmd_dict = CMD_DICT.copy()
@@ -88,8 +87,9 @@ def coordinate_sort_sam(input_file, output_file):
     call(picard_cmd, cmd_dict)
 
 @follows(mkdir('clipped'))
-@transform(coordinate_sort_sam, regex(r'^(.*)/sorted/(.+)\.sorted\.sam$'),
-        r'\1/clipped/\2.clipped.sam')
+@transform(coordinate_sort_sam,
+           regex(r'^sorted/(.+)\.sorted\.sam$'),
+           r'clipped/\1.clipped.sam')
 def clip_reads(input_file, output_file):
     '''Clip reads around primers'''
     cmd_dict = CMD_DICT.copy()
@@ -100,7 +100,7 @@ def clip_reads(input_file, output_file):
     call(clip_cmd, cmd_dict)
 
 @follows(mkdir('bam'))
-@transform(clip_reads, regex(r'^(.*)/clipped/(.+)\.clipped\.sam$'), r'\1/bam/\2.clipped.bam')
+@transform(clip_reads, regex(r'^clipped/(.+)\.clipped\.sam$'), r'bam/\1.clipped.bam')
 def sam_to_bam(input_file, output_file):
     '''Convert SAM file to BAM'''
     cmd_dict = CMD_DICT.copy()
@@ -115,7 +115,7 @@ def sam_to_bam(input_file, output_file):
 
 # Update header with missing data
 @follows(mkdir('prepped'))
-@transform(sam_to_bam, regex(r'^(.*)/bam/(.*)\.clipped\.bam$'), r'\1/prepped/\2.prepped.bam')
+@transform(sam_to_bam, regex(r'^bam/(.+)\.clipped\.bam$'), r'prepped/\1.prepped.bam')
 def fix_header(input_file, output_file):
     '''Fix header info'''
     cmd_dict = CMD_DICT.copy()
@@ -142,11 +142,11 @@ def fix_header(input_file, output_file):
     call(picard_cmd, cmd_dict)
 
 @follows(mkdir('coverage'))
-@transform(fix_header, regex(r'^(.*)/prepped/(.+)\.prepped\.bam$'), r'\1/coverage/\2.coverage')
+@transform(bam_index, regex(r'^prepped/(.+)\.prepped\.bam\.bai$'), r'coverage/\1.coverage')
 def calculate_coverage(input_file, output_file):
     '''Calculate coverage statistics'''
     cmd_dict = CMD_DICT.copy()
-    cmd_dict['infile'] = input_file
+    cmd_dict['infile'] = os.path.splitext(input_file)[0]
     cmd_dict['outfile'] = output_file
     pmsg('Coverage calculations', cmd_dict['infile'], cmd_dict['outfile'])
     gatk_cmd = '%(gatk)s -T DepthOfCoverage ' + \

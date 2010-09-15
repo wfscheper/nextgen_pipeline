@@ -15,9 +15,8 @@ from utils import call, check_if_clean, pmsg, unpaired_re, unpaired_strings, CMD
 
 
 def count_covariates_generator():
-    cwd = os.getcwd()
-    for file in glob('%s/prepped/*.bam' % cwd):
-        filename = '%s/recal_data/%s' % (cwd, unpaired_strings['recal_data'] % \
+    for file in glob('prepped/*.bam'):
+        filename = 'covariates/%s' % (unpaired_strings['recal_data'] % \
                 unpaired_re.search(file).groupdict())
         yield [file, filename]
 
@@ -52,10 +51,10 @@ def sorted_count_covariates(input_file, output_file):
 
 # Apply Quality Score Recalibration
 @follows(mkdir('recalibrated'))
-@transform(sorted_count_covariates,
-           regex(r'^(.*)/recal_data/(.*).prepped.csv$'),
-           inputs([r'\1/recal_data/\2.prepped.csv', r'\1/prepped/\2.prepped.bam']),
-           r'\1/recalibrated/\2.recalibrated.bam')
+@transform(count_covariates,
+           regex(r'^covariates/(.+).prepped.csv$'),
+           inputs([r'covariates/\1.prepped.csv', r'prepped/\1.prepped.bam']),
+           r'recalibrated/\1.recalibrated.bam')
 def recalibrate_quality_scores(input_files, output_file):
     '''Apply Recalibrated QSs to BAM file'''
     cmd_dict = CMD_DICT.copy()
@@ -74,16 +73,17 @@ def recalibrate_quality_scores(input_files, output_file):
     call(samtools_cmd, cmd_dict)
 
 # Generate QS Recalibration Covariates
-@transform(recalibrate_quality_scores, regex(r'^(.*)/recalibrated/(.*).recalibrated.bam$'),
-        r'\1/recal_data/\2.recalibrated.csv')
-def recal_count_covariates(input_file, output_file):
+@transform(recalibrate_quality_scores,
+           regex(r'^recalibrated/(.+).recalibrated.bam$'),
+           r'covariates/\1.recalibrated.csv')
     '''Run CountCovariates on files in recalibrated/'''
     count_covariates(input_file, output_file)
 
 # Find candidate intervals for realignment
-@follows(mkdir('indel_intervals'))
-@transform(recalibrate_quality_scores, regex(r'^(.*)/recalibrated/(.+)\.recalibrated\.bam$'),
-        r'\1/indel_intervals/\2.intervals')
+@follows(recount_covariates, mkdir('intervals'))
+@transform(recalibrate_quality_scores,
+           regex(r'^recalibrated/(.+)\.recalibrated\.bam$'),
+           r'intervals/\1.intervals')
 def create_intervals(input_file, output_file):
     '''Determine indel candidate intervals'''
     cmd_dict = CMD_DICT.copy()
@@ -100,9 +100,10 @@ def create_intervals(input_file, output_file):
 
 # Realign around possible indels
 @follows(mkdir('realigned'))
-@transform(create_intervals, regex(r'^(.*)/indel_intervals/(.+)\.intervals$'),
-        inputs([r'\1/recalibrated/\2.recalibrated.bam', r'\1/indel_intervals/\2.intervals']),
-        r'\1/realigned/\2.realigned.bam')
+@transform(create_intervals,
+           regex(r'^intervals/(.+)\.intervals$'),
+           inputs([r'recalibrated/\1.recalibrated.bam', r'intervals/\1.intervals']),
+            r'realigned/\1.realigned.bam')
 def local_realignment(input_files, output_file):
     '''Realign reads around candidate indels'''
     cmd_dict = CMD_DICT.copy()
@@ -122,9 +123,10 @@ def local_realignment(input_files, output_file):
     call(samtools_cmd, cmd_dict)
 
 # Fix mate info post realignment
-@follows(local_realignment, mkdir('realigned_fixmate'))
-@transform(local_realignment, regex(r'^(.*)/realigned/(.+)\.realigned\.bam$'),
-        r'\1/realigned_fixmate/\2.realigned_fixmate.bam')
+@follows(local_realignment, mkdir('fixmate'))
+@transform(local_realignment,
+           regex(r'^realigned/(.+)\.realigned\.bam$'),
+           r'fixmate/\1.fixmate.bam')
 def fix_mate_realigned(input_file, output_file):
     '''Fix mate info post-realignment'''
     cmd_dict = CMD_DICT.copy()

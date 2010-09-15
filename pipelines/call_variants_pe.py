@@ -71,9 +71,10 @@ def snp_genotyping(input_file, output_file):
     call(gatk_cmd, cmd_dict)
 
 # Filter Indels
-@transform(indel_genotyping, regex(r'^(.*)/indels/(.+)\.detailed\.bed$'),
-        inputs(r'\1/indels/\2.detailed.bed'),
-        r'\1/indels/\2.filtered.bed')
+@transform(indel_genotyping,
+           regex(r'^indels/(.+)\.indels_raw.vcf$'),
+           inputs(r'indels/\1.indels_raw.bed'),
+           r'indels/\1.indels_filtered.bed')
 def filter_indels(input_file, output_file):
     '''Filter indel calls'''
     cmd_dict = CMD_DICT.copy()
@@ -90,12 +91,14 @@ def filter_indels(input_file, output_file):
 
 # Create InDel mask
 @follows(filter_indels)
-@transform(indel_genotyping, regex(r'^(.*)/indels/(.*)\.detailed\.bed$'),
-        inputs([r'\1/indels/\2.raw.bed']), r'\1/indels/\2.mask.bed')
+@transform(indel_genotyping,
+           regex(r'^indels/(.+)\.indels_raw\.vcf$'),
+           inputs(r'indels/\1.indels_raw.bed'),
+           r'indels/\1.indels_mask.bed')
 def create_indel_mask(input_file, output_file):
     '''Create Indel Mask'''
     cmd_dict = CMD_DICT.copy()
-    cmd_dict['infile'] = input_file[0]
+    cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('Indel Masking', cmd_dict['infile'], cmd_dict['outfile'])
     python_cmd = '%(makeIndelMask)s ' + \
@@ -106,10 +109,9 @@ def create_indel_mask(input_file, output_file):
 
 # Filter SNPs
 @follows(snp_genotyping, create_indel_mask)
-@transform(snp_genotyping, regex(r'^(.*)/snps/(.*)_snps.raw.vcf$'),
-        inputs([r'\1/snps/\2_snps.raw.vcf',
-                r'\1/indels/\2_indels.mask.bed']),
-        r'\1/snps/\2_snps.filtered.vcf')
+@transform(snp_genotyping, regex(r'^snps/(.+).snps_raw.vcf$'),
+        inputs([r'snps/\1.snps_raw.vcf', r'indels/\1.indels_mask.bed']),
+        r'snps/\1.snps_filtered.vcf')
 def filter_snps(input_files, output_file):
     '''Filter SNP Calls'''
     cmd_dict = CMD_DICT.copy()

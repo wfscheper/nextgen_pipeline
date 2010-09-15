@@ -112,8 +112,7 @@ def sort_bam(input_file, output_file):
 
 # Remove duplicates
 @follows(mkdir('deduped'))
-@transform(sort_bam, regex(r'^sorted/(.+)\.sorted\.bam$'),
-        r'deduped/\1.deduped.bam')
+@transform(sort_bam, regex(r'^sorted/(.+)\.sorted\.bam$'), r'deduped/\1.deduped.bam')
 def remove_duplicates(input_file, output_file):
     '''Remove duplicates from BAM file'''
     cmd_dict = CMD_DICT.copy()
