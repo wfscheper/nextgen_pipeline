@@ -52,6 +52,7 @@ def indel_genotyping(input_file, output_file):
     call(gatk_cmd, cmd_dict)
 
 # Call SNPs
+@jobs_limit(1)
 @follows(clean_up, mkdir('snps'))
 @files(snp_genoytping_generator)
 def snp_genotyping(input_file, output_file):
@@ -67,7 +68,8 @@ def snp_genotyping(input_file, output_file):
             '--intervals %(exome)s ' + \
             '--input_file %(infile)s ' + \
             '--out %(outfile)s ' + \
-            '--standard_min_confidence_threshold_for_calling 30.0'
+            '--standard_min_confidence_threshold_for_calling 30.0 ' + \
+            '--num_threads 8'
     call(gatk_cmd, cmd_dict)
 
 # Filter Indels
