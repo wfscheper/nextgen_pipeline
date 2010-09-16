@@ -69,6 +69,13 @@ def snp_genotyping(input_file, output_file):
             '--input_file %(infile)s ' + \
             '--out %(outfile)s ' + \
             '--standard_min_confidence_threshold_for_calling 30.0 ' + \
+            '--annotations AlleleBalance ' + \
+            '--annotations DepthOfCoverage ' + \
+            '--annotations HomopolymerRun ' + \
+            '--annotations MappingQualityZero' + \
+            '--annotations QualByDepth' + \
+            '--annotations RMSMappingQuality' + \
+            '--annotations HaplotypeScore' + \
             '--num_threads 8'
     call(gatk_cmd, cmd_dict)
 
