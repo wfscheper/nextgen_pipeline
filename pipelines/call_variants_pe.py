@@ -73,9 +73,9 @@ def snp_genotyping(input_file, output_file):
             '--annotation DepthOfCoverage ' + \
             '--annotation HomopolymerRun ' + \
             '--annotation MappingQualityZero ' + \
-            '--annotation QualByDepth' + \
-            '--annotation RMSMappingQuality' + \
-            '--annotation HaplotypeScore' + \
+            '--annotation QualByDepth ' + \
+            '--annotation RMSMappingQuality ' + \
+            '--annotation HaplotypeScore ' + \
             '--num_threads 8'
     call(gatk_cmd, cmd_dict)
 
