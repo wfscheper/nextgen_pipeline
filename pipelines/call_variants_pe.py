@@ -72,10 +72,10 @@ def snp_genotyping(input_file, output_file):
             '--annotations AlleleBalance ' + \
             '--annotations DepthOfCoverage ' + \
             '--annotations HomopolymerRun ' + \
-            '--annotations MappingQualityZero' + \
-            '--annotations QualByDepth' + \
-            '--annotations RMSMappingQuality' + \
-            '--annotations HaplotypeScore' + \
+            '--annotations MappingQualityZero ' + \
+            '--annotations QualByDepth ' + \
+            '--annotations RMSMappingQuality ' + \
+            '--annotations HaplotypeScore ' + \
             '--num_threads 8'
     call(gatk_cmd, cmd_dict)
 
