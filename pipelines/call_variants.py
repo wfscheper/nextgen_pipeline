@@ -132,8 +132,8 @@ def filter_snps(input_files, output_file):
             '--analysis_type VariantFiltration ' + \
             '--reference_sequence %(genome)s ' + \
             '--out %(outfile)s ' + \
-            '--rodBind variant,VCF,%(snpfile)s ' + \
-            '--rodBind mask,Bed,%(maskfile)s ' + \
+            '--rodBind:variant,VCF %(snpfile)s ' + \
+            '--rodBind:mask,Bed %(maskfile)s ' + \
             '--maskName InDel ' + \
             '--clusterWindowSize 10 ' + \
             '--filterExpression %(standard_filter)s ' + \
