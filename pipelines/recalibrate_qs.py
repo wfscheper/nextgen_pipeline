@@ -25,13 +25,13 @@ def call_count_covariates(input_file, output_file):
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('Count Covariates', cmd_dict['infile'], cmd_dict['outfile'])
-    gatk_cmd = '%(gatk)s ' + \
-            '-T CountCovariates ' + \
-            '-R %(genome)s ' + \
-            '-D %(dbsnp)s ' + \
-            '-I %(infile)s ' + \
-            '-recalFile %(outfile)s ' + \
-            '-standard '
+    gatk_cmd = '%(gatk)s --analysis_type CountCovariates ' + \
+            '--reference_sequence %(genome)s ' + \
+            '--DBSNP %(dbsnp)s ' + \
+            '--input_file %(infile)s ' + \
+            '--recal_file %(outfile)s ' + \
+            '--standard_covs ' + \
+            '--num_threads 2 '
     call(gatk_cmd, cmd_dict)
 
 @jobs_limit(1)
@@ -43,7 +43,7 @@ def clean_up(input_files, output_file):
     call('rm -rf %s' % " ".join(input_files), {}, is_logged=False)
 
 # Calculate Covariates for Quality Score Recalibration
-@follows(clean_up, mkdir('covariates'))
+@follows(clean_up, mkdir('covariates', 'logs'))
 @files(count_covariates_generator)
 def count_covariates(input_file, output_file):
     '''Run CounCovariates on files in sorted/'''
@@ -62,12 +62,11 @@ def recalibrate_quality_scores(input_files, output_file):
     cmd_dict['bam'] = input_files[1]
     cmd_dict['outfile'] = output_file
     pmsg('QS Recalibration', ', '.join(input_files), output_file)
-    gatk_cmd = '%(gatk)s ' + \
-            '-T TableRecalibration ' + \
-            '-R %(genome)s ' + \
-            '-I %(bam)s ' + \
-            '-recalFile %(recal_data)s ' + \
-            '-o %(outfile)s'
+    gatk_cmd = '%(gatk)s --analysis_type TableRecalibration ' + \
+            '--reference_sequence %(genome)s ' + \
+            '--input_file %(bam)s ' + \
+            '--recal_file %(recal_data)s ' + \
+            '--out %(outfile)s'
     call(gatk_cmd, cmd_dict)
     samtools_cmd = '%(samtools)s index %(outfile)s'
     call(samtools_cmd, cmd_dict)
@@ -91,12 +90,11 @@ def create_intervals(input_file, output_file):
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('Interval Creation', input_file, output_file)
-    gatk_cmd = '%(gatk)s ' + \
-            '-T RealignerTargetCreator ' + \
-            '-R %(genome)s ' + \
-            '-D %(dbsnp)s ' + \
-            '-I %(infile)s ' + \
-            '-o %(outfile)s'
+    gatk_cmd = '%(gatk)s --analysis_type RealignerTargetCreator ' + \
+            '--reference_sequence %(genome)s ' + \
+            '--DBSNP %(dbsnp)s ' + \
+            '--input_file %(infile)s ' + \
+            '--out %(outfile)s'
     call(gatk_cmd, cmd_dict)
 
 # Realign around possible indels
@@ -104,7 +102,7 @@ def create_intervals(input_file, output_file):
 @transform(create_intervals,
            regex(r'^intervals/(.+)\.intervals$'),
            inputs([r'recalibrated/\1.recalibrated.bam', r'intervals/\1.intervals']),
-            r'realigned/\1.realigned.bam')
+           r'realigned/\1.realigned.bam')
 def local_realignment(input_files, output_file):
     '''Realign reads around candidate indels'''
     cmd_dict = CMD_DICT.copy()
@@ -112,13 +110,12 @@ def local_realignment(input_files, output_file):
     cmd_dict['indel_intervals'] = input_files[1]
     cmd_dict['outfile'] = output_file
     pmsg('Local Realignment', ', '.join(input_files), output_file)
-    gatk_cmd = '%(gatk)s ' + \
-            '-T IndelRealigner ' + \
-            '-R %(genome)s ' + \
-            '-D %(dbsnp)s ' + \
-            '-I %(recalibrated)s ' + \
-            '-targetIntervals %(indel_intervals)s ' + \
-            '-o %(outfile)s'
+    gatk_cmd = '%(gatk)s --analysis_type IndelRealigner ' + \
+            '--reference_sequence %(genome)s ' + \
+            '--DBSNP %(dbsnp)s ' + \
+            '--input_file %(recalibrated)s ' + \
+            '--targetIntervals %(indel_intervals)s ' + \
+            '--out %(outfile)s'
     call(gatk_cmd, cmd_dict)
     samtools_cmd = '%(samtools)s index %(outfile)s'
     call(samtools_cmd, cmd_dict)
@@ -135,9 +132,9 @@ def fix_mate_realigned(input_file, output_file):
     cmd_dict['outfile'] = output_file
     pmsg('Fix Mate Info', cmd_dict['infile'], cmd_dict['outfile'])
     picard_cmd = '%(picard)s FixMateInformation ' + \
-            'I=%(infile)s ' + \
-            'O=%(outfile)s ' + \
-            'SO=coordinate ' + \
+            'INPUT=%(infile)s ' + \
+            'OUTPUT=%(outfile)s ' + \
+            'SORT_ORDER=coordinate ' + \
             'VALIDATION_STRINGENCY=SILENT'
     call(picard_cmd, cmd_dict)
     samtools_cmd = '%(samtools)s index %(outfile)s'
