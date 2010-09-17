@@ -16,10 +16,11 @@ from utils import call, paired_re, paired_strings, pmsg, read_group_re, saicmp, 
 
 
 def copy_sequence_generator():
-    for file in glob('staging_area/*'):
-        filename = '%(line)s_s_%(lane)s_%(pair)s.fastq.gz' % \
-                paired_re.search(file).groupdict()
-        yield [file, 'fastq/%s' % (filename)]
+    for in_file in glob('staging_area/*'):
+        out_file = os.path.split(in_file)[-1]
+        out_file = os.path.splitext(out_file)[0] + '.fastq.gz'
+        out_file = os.path.join('fastq', out_file)
+        yield [in_file, out_file]
 
 # Copy sequence from staging area
 @follows(mkdir('fastq'))
@@ -40,25 +41,22 @@ def copy_sequence(input_file, output_file):
     zip(cmd_dict['outfile_prefix'])
 
 @follows(mkdir('sai'), mkdir('logs'))
-@transform(copy_sequence, regex(r'^fastq/(.+)\.fastq\.gz$'), r'sai/\1.sai')
+@transform(copy_sequence, regex(r'^fastq/(.+)_sequence\.fastq\.gz$'), r'sai/\1.sai')
 def fastq_to_sai(input_file, output_file):
     '''Convert FASTQ files to SAI files.'''
     cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
-    bwacmd = '%(bwa)s aln -t %(threads)s %(genome)s %(infile)s > %(outfile)s'
     pmsg('Aligning sequences', cmd_dict['infile'], cmd_dict['outfile'])
+    bwacmd = '%(bwa)s aln -t %(threads)s %(genome)s %(infile)s > %(outfile)s'
     call(bwacmd, cmd_dict)
 
 # Merge paired ends to SAM
 @follows(mkdir('sam'))
-@transform(fastq_to_sai, regex(r'^sai/(\w+)_s_(\d+)_1\.sai$'),
-           inputs([r'sai/\1_s_\2_2.sai',
-                   r'sai/\1_s_\2_1.sai',
-                   r'fastq/\1_s_\2_1.fastq.gz',
-                   r'fastq/\1_s_\2_2.fastq.gz']),
-            r'sam/\1_s_\2.sam')
-def paired_ends_to_sam(input_files, output_file):
+@transform(fastq_to_sai, regex(r'^sai/(\w+)_s_(\d)(_1)?\.sai$'),
+           inputs([r'sai/\1_s_\2*.sai', r'fastq/\1_s_\2*.fastq.gz']),
+           r'sam/\1_s_\2.sam')
+def make_sam(input_files, output_file):
     '''Convert SAI files and FASTQ files to SAM files.'''
 
     def saicmp(x, y):
@@ -78,12 +76,13 @@ def paired_ends_to_sam(input_files, output_file):
     # Run bwa to merge paired ends into SAM file
     cmd_dict['infiles'] = ' '.join(input_files)
     cmd_dict['outfile'] = output_file
-    bwa_cmd = '%(bwa)s sampe -f %(outfile)s %(genome)s %(infiles)s'
+    cmd_dict['sam_type'] = 'sampe' if len(input_files) == 4 else 'samse'
+    bwa_cmd = '%(bwa)s %(sam_type)s -f %(outfile)s %(genome)s %(infiles)s'
     call(bwa_cmd, cmd_dict)
 
 ## Convert filtered SAM files to BAM files
 @follows(mkdir('bam'))
-@transform(paired_ends_to_sam, regex(r'^sam/(.+)\.sam$'), r'bam/\1.bam')
+@transform(make_sam, regex(r'^sam/(.+)\.sam$'), r'bam/\1.bam')
 def sam_to_bam(input_file, output_file):
     '''Convert SAM files to BAM files.'''
     cmd_dict = CMD_DICT.copy()
@@ -104,10 +103,10 @@ def sort_bam(input_file, output_file):
     cmd_dict['outprefix'] = os.path.splitext(cmd_dict['outfile'])[0]
     pmsg('Cooridinate sorting BAM file', cmd_dict['infile'], cmd_dict['outfile'])
     picard_cmd = '%(picard)s SortSam ' + \
-            'I=%(infile)s ' + \
-            'O=%(outfile)s ' + \
-            'SO=coordinate ' + \
-            'VALIDATION_STRINGENCY=SILENT'
+            'INPUT=%(infile)s ' + \
+            'OUTPUT=%(outfile)s ' + \
+            'SORT_ORDER=coordinate ' + \
+            'VALIDATION_STRINGENCY=SILENT '
     call(picard_cmd, cmd_dict)
 
 # Remove duplicates
@@ -121,11 +120,11 @@ def remove_duplicates(input_file, output_file):
     cmd_dict['metrics'] = output_file.rstrip('bam') + 'metrics'
     pmsg('Removing duplicates', input_file, output_file)
     picard_cmd = '%(picard)s MarkDuplicates ' + \
-            'I=%(infile)s ' + \
-            'O=%(outfile)s ' + \
-            'M=%(metrics)s ' + \
+            'INPUT=%(infile)s ' + \
+            'OUTPUT=%(outfile)s ' + \
+            'METRICS_FILE=%(metrics)s ' + \
             'REMOVE_DUPLICATES=true ' + \
-            'VALIDATION_STRINGENCY=SILENT'
+            'VALIDATION_STRINGENCY=SILENT '
     call(picard_cmd, cmd_dict)
 
 # Update header with missing data
@@ -143,10 +142,10 @@ def fix_header(input_file, output_file):
     )
     pmsg('Fixing header', input_file, output_file)
     picard_cmd = '%(picard)s ReplaceSamHeader ' + \
-            'I=%(infile)s ' + \
-            'O=%(outfile)s ' + \
+            'INPUT=%(infile)s ' + \
+            'OUTPUT=%(outfile)s ' + \
             'HEADER=%(header_tmp)s ' + \
-            'VALIDATION_STRINGENCY=SILENT'
+            'VALIDATION_STRINGENCY=SILENT '
     call(picard_cmd, cmd_dict)
     os.remove(cmd_dict['header_tmp'])
 
@@ -165,10 +164,10 @@ def tag_reads(input_file, output_file):
     call(command, cmd_dict, is_logged=False)
     pmsg('Compressing SAM file', cmd_dict['samfile'], output_file)
     command = '%(picard)s SamFormatConverter ' + \
-            'I=%(samfile)s ' + \
-            'O=%(outfile)s ' + \
+            'INPUT=%(samfile)s ' + \
+            'OUTPUT=%(outfile)s ' + \
             'CREATE_INDEX=true ' + \
-            'VALIDATION_STRINGENCY=SILENT'
+            'VALIDATION_STRINGENCY=SILENT '
     call(command, cmd_dict)
     os.remove(cmd_dict['samfile'])
 
@@ -180,20 +179,20 @@ def calculate_coverage(input_file, output_file):
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('Coverage calculations', cmd_dict['infile'], cmd_dict['outfile'])
-    gatk_cmd = '%(gatk)s -T DepthOfCoverage ' + \
-            '-I %(infile)s ' + \
-            '-R %(genome)s ' + \
-            '-L %(exome)s ' + \
-            '-o %(outfile)s ' + \
+    gatk_cmd = '%(gatk)s --analysis_type DepthOfCoverage ' + \
+            '--reference_sequence %(genome)s ' + \
+            '--intervals %(exome)s ' + \
+            '--input_file %(infile)s ' + \
+            '--out %(outfile)s ' + \
             '--minMappingQuality 10 ' + \
             '--minBaseQuality 10 ' + \
-            ''#'-omitBaseOutput'
+            '--omitDepthOutputAtEachBase '
     call(gatk_cmd, cmd_dict)
 
 stages_dict = {
     'copy': copy_sequence,
     'align': fastq_to_sai,
-    'sam': paired_ends_to_sam,
+    'sam': make_sam,
     'bam': sam_to_bam,
     'sort': sort_bam,
     'dedupe': remove_duplicates,
