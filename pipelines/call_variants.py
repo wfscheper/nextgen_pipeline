@@ -45,7 +45,7 @@ def indel_genotyping(input_file, output_file):
     gatk_cmd = '%(gatk)s ' + \
             '--analysis_type IndelGenotyperV2 ' + \
             '--reference_sequence %(genome)s ' + \
-            '--intervals %(exome)s ' + \
+            '--intervals %(target)s ' + \
             '--input_file %(infile)s ' + \
             '--out %(outfile)s ' + \
             '--bedOutput %(outfile_bed)s'
@@ -65,7 +65,7 @@ def snp_genotyping(input_file, output_file):
             '--analysis_type UnifiedGenotyper ' + \
             '--reference_sequence %(genome)s ' + \
             '--DBSNP %(dbsnp)s ' + \
-            '--intervals %(exome)s ' + \
+            '--intervals %(target)s ' + \
             '--input_file %(infile)s ' + \
             '--out %(outfile)s ' + \
             '--standard_min_confidence_threshold_for_calling 30.0 ' + \

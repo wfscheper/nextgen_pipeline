@@ -1,14 +1,14 @@
 #!/usr/bin/env python
-import datetime
-import os
-import sys
-import multiprocessing
-
+from ConfigParser import ConfigParser, SafeConfigParser
 from glob import iglob as glob
+from log import quick_start_log
 from optparse import OptionParser
 from ruffus import pipeline_run, pipeline_printout_graph
-
-from log import quick_start_log
+import datetime
+import multiprocessing
+import os
+import sys
+import utils
 
 
 PIPELINE_PATH = 'pipelines.'
@@ -34,22 +34,37 @@ def show_pipeline_stage_help():
                     print '\t\t%s:\t%s' % (stage, fn.__doc__)
     sys.exit(0)
 
+#==================================================================================================
+# Config command line parser
+#==================================================================================================
 parser = OptionParser()
 parser.add_option('-p', '--pipeline', dest='pipeline', default=None, help='pipeline to run')
 parser.add_option('-s', '--stage', dest='stage', help='stage of pipeline to run')
 parser.add_option('-t', '--threads', action='store', type='int', dest='threads',
-                  default=0, help='number of threads to use')
+                  default=None, help='number of threads to use')
 parser.add_option('-j', '--jobs', action='store', type='int', dest='jobs',
-                  default=0, help='number of jobs to use')
+                  default=None, help='number of jobs to use')
 parser.add_option('-f', '--force', action='store_true', dest='force_run',
                   default=False, help='Force pipeline to run stage')
+parser.add_option('-c', '--config', dest='config', default='pipeline.cfg',
+                  help='config file, defaults to pipeline.cfg')
 parser.add_option('-l', '--log', dest='log', default=None, help='path to log file')
 parser.add_option('--graph', dest='print_graph', default=False, action='store_true',
-        help='Print a graph of the pipeline rather than running it')
+                  help='Print a graph of the pipeline rather than running it')
 
 if __name__ == '__main__':
     pipeline_stages = {}
     (options, args) = parser.parse_args()
+
+    # Configuration parsing
+    if not os.path.isfile(options.config):
+        parser.error('Could not find config file: %s' % options.config)
+    config = SafeConfigParser()
+    config.read(options.config)
+
+    for section in config.sections():
+        for option in config.options(section):
+            utils.CMD_DICT[option] = config.get(section, option)
 
     # get number of cpus on machine
     ncpus = multiprocessing.cpu_count()
@@ -84,7 +99,8 @@ if __name__ == '__main__':
         if options.jobs:
             NUM_JOBS = options.jobs if options.jobs <= ncpus else ncpus
         else:
-            NUM_JOBS = ncpus / 2
+            NUM_JOBS = config.getint('jobs') \
+                    if config.has_option('Threading', 'jobs') else ncpus / 2
 
         # user speicified log file
         if options.log:

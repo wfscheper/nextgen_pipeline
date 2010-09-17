@@ -5,31 +5,8 @@ import subprocess
 
 
 DEBUG_COMMAND = 'touch %(outfile)s'
-DEBUG = False
 
-CMD_DICT = {
-    'threads': '4',
-    # commands
-    'bwa': '`which bwa`',
-    'clip_reads': '`which clip_se_reads.py`',
-    'filterIndels': '`which filterSingleSampleCalls.pl`',
-    'gatk': '`which gatk.sh`',
-    'makeIndelMask': '/usr/bin/env python `which makeIndelMask.py`',
-    'picard': '`which picard.sh`',
-    'sampl': '/usr/bin/perl `which samtools.pl`',
-    'samtools': '`which samtools`',
-    # data files
-    'dbsnp': '../resources/dbsnp_130_b37.rod',
-    'exome': '../resources/hg19_capture.interval_list',
-    'genome': '../resources/human_g1k_v37.fasta',
-    'header_template': '../resources/header.template',
-    'primers': '../resources/ceph_raindance_1_primers_hg19.bed',
-    'se_target': '../resources/ceph_target_regions_hg19.interval_list',
-    # filters
-    'standard_filter': '\"QUAL < 30.0 || AB > 0.75 && DP > 40 || QD < 5.0 || HRun > 5 || ' + \
-        'SB > -0.10\"',
-    'hard_to_validate_filter': '\"MQ0 >= 4 && ((MQ0 / (1.0 * DP)) > 0.1)\"',
-}
+CMD_DICT = {}
 
 paired_re = re.compile(r'(?P<line>\w+)_s_(?P<lane>\d+)_(?P<pair>[12])(?P<rest>.*)')
 unpaired_re = re.compile(r'(?P<line>\w+)_s_(?P<lane>\d+)(?P<ext>.*)')
@@ -52,10 +29,10 @@ unpaired_strings = {
 
 logger = logging.getLogger('main')
 
-def call(command, command_dict, is_logged=True):
+def call(command, command_dict, is_logged=True, is_debug=False):
     command_line = command % command_dict
     logger.debug('Calling command line: %s' % command_line)
-    if DEBUG:
+    if is_debug:
         command_line = DEBUG_COMMAND % command_dict
     if is_logged:
         logfile = os.path.split(command_dict['outfile'])[-1]

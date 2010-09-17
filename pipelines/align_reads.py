@@ -181,7 +181,7 @@ def calculate_coverage(input_file, output_file):
     pmsg('Coverage calculations', cmd_dict['infile'], cmd_dict['outfile'])
     gatk_cmd = '%(gatk)s --analysis_type DepthOfCoverage ' + \
             '--reference_sequence %(genome)s ' + \
-            '--intervals %(exome)s ' + \
+            '--intervals %(target)s ' + \
             '--input_file %(infile)s ' + \
             '--out %(outfile)s ' + \
             '--minMappingQuality 10 ' + \
