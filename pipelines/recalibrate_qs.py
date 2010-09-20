@@ -138,7 +138,7 @@ def fix_mate_realigned(input_file, output_file):
             'VALIDATION_STRINGENCY=SILENT'
     call(picard_cmd, cmd_dict)
     samtools_cmd = '%(samtools)s index %(outfile)s'
-    call(samtools_cmd, cmd_dict)
+    call(samtools_cmd, cmd_dict, is_logged=False)
 
 stages_dict = {
     'clean_up': clean_up,
