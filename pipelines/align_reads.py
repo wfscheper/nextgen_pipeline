@@ -76,8 +76,14 @@ def make_sam(input_files, output_file):
     # Run bwa to merge paired ends into SAM file
     cmd_dict['infiles'] = ' '.join(input_files)
     cmd_dict['outfile'] = output_file
-    cmd_dict['sam_type'] = 'sampe' if len(input_files) == 4 else 'samse'
-    bwa_cmd = '%(bwa)s %(sam_type)s -f %(outfile)s %(genome)s %(infiles)s'
+    if len(input_files) == 4:
+        cmd_dict['sam_type'] = 'sampe'
+        cmd_dict.update(read_group_re.match(input_files[-1]).groupdict())
+        bwa_cmd = '%(bwa)s %(sam_type)s -i %(read_group)s -m %(sample)s -l %(read_group)s ' + \
+                '-p illumina -f %(outfile)s %(reference)s %(infiles)s'
+    else:
+        cmd_dict['sam_type'] = 'samse'
+        bwa_cmd = '%(bwa)s %(sam_type)s -f %(outfile)s %(reference)s %(infiles)s'
     call(bwa_cmd, cmd_dict)
 
 ## Convert filtered SAM files to BAM files
@@ -126,53 +132,11 @@ def remove_duplicates(input_file, output_file):
             'REMOVE_DUPLICATES=true ' + \
             'VALIDATION_STRINGENCY=SILENT '
     call(picard_cmd, cmd_dict)
-
-# Update header with missing data
-@follows(mkdir('header'))
-@transform(remove_duplicates, regex(r'^deduped/(.+)\.deduped\.bam$'), r'header/\1.header.bam')
-def fix_header(input_file, output_file):
-    '''Fix header info'''
-    cmd_dict = CMD_DICT.copy()
-    cmd_dict['infile'] = input_file
-    cmd_dict['outfile'] = output_file
-    cmd_dict.update(read_group_re.match(input_file).groupdict())
-    cmd_dict['header_tmp'] = '/tmp/header_%(read_group)s_%(lane)s' % cmd_dict
-    open(cmd_dict['header_tmp'], 'w').write(
-        open(cmd_dict['header_template'], 'r').read() % cmd_dict
-    )
-    pmsg('Fixing header', input_file, output_file)
-    picard_cmd = '%(picard)s ReplaceSamHeader ' + \
-            'INPUT=%(infile)s ' + \
-            'OUTPUT=%(outfile)s ' + \
-            'HEADER=%(header_tmp)s ' + \
-            'VALIDATION_STRINGENCY=SILENT '
-    call(picard_cmd, cmd_dict)
-    os.remove(cmd_dict['header_tmp'])
-
-@follows(mkdir('prepped'))
-@transform(fix_header, regex('^header/(.+)\.header\.bam$'), r'prepped/\1.prepped.bam')
-def tag_reads(input_file, output_file):
-    '''Tag reads with read group'''
-    cmd_dict = CMD_DICT.copy()
-    cmd_dict['infile'] = input_file
-    cmd_dict['outfile'] = output_file
-    cmd_dict['samfile'] = os.path.splitext(output_file)[0] + '.sam'
-    cmd_dict.update(read_group_re.match(input_file).groupdict())
-    pmsg('Tagging reads', input_file, output_file)
-    command = '%(samtools)s view -h %(infile)s | ' + \
-            'sed "/^[^@]/s|$|\tPG:Z:bwa\tRG:Z:%(read_group)s|" > %(samfile)s'
-    call(command, cmd_dict, is_logged=False)
-    pmsg('Compressing SAM file', cmd_dict['samfile'], output_file)
-    command = '%(picard)s SamFormatConverter ' + \
-            'INPUT=%(samfile)s ' + \
-            'OUTPUT=%(outfile)s ' + \
-            'CREATE_INDEX=true ' + \
-            'VALIDATION_STRINGENCY=SILENT '
-    call(command, cmd_dict)
-    os.remove(cmd_dict['samfile'])
+    samtools_cmd = '%(samtools)s index %(outfile)s'
+    call(samtools_cmd, cmd_dict, is_logged=False)
 
 @follows(mkdir('coverage'))
-@transform(tag_reads, regex(r'^prepped/(.+)\.prepped\.bam$'), r'coverage/\1.coverage')
+@transform(remove_duplicates, regex(r'^deduped/(.+)\.deduped\.bam$'), r'coverage/\1.coverage')
 def calculate_coverage(input_file, output_file):
     '''Calculate coverage statistics'''
     cmd_dict = CMD_DICT.copy()
@@ -196,8 +160,6 @@ stages_dict = {
     'bam': sam_to_bam,
     'sort': sort_bam,
     'dedupe': remove_duplicates,
-    'fix_header': fix_header,
-    'tag': tag_reads,
     'coverage': calculate_coverage,
     'default': calculate_coverage,
 }

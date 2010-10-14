@@ -14,12 +14,6 @@ from ruffus import check_if_uptodate, files, follows, inputs, jobs_limit, mkdir,
 from utils import call, check_if_clean, pmsg, unpaired_re, unpaired_strings, CMD_DICT
 
 
-def count_covariates_generator():
-    for file in glob('prepped/*.bam'):
-        filename = 'covariates/%s' % (unpaired_strings['recal_data'] % \
-                unpaired_re.search(file).groupdict())
-        yield [file, filename]
-
 def call_count_covariates(input_file, output_file):
     cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
@@ -34,8 +28,14 @@ def call_count_covariates(input_file, output_file):
             '--num_threads 2 '
     call(gatk_cmd, cmd_dict)
 
+def count_covariates_generator():
+    for file in glob('deduped/*.bam'):
+        filename = 'covariates/%s' % (unpaired_strings['recal_data'] % \
+                unpaired_re.search(file).groupdict())
+        yield [file, filename]
+
 @jobs_limit(1)
-@files(["bam/", "clipped/", "deduped/", "header/", "sam/", "sorted/"], None)
+@files(["bam/", "clipped/", "sam/", "sorted/"], None)
 @check_if_uptodate(check_if_clean)
 def clean_up(input_files, output_file):
     '''Clean up intermediate files'''
