@@ -18,7 +18,7 @@ from utils import call, paired_re, paired_strings, pmsg, read_group_re, saicmp, 
 def copy_sequence_generator():
     for in_file in glob('staging_area/*'):
         out_file = os.path.split(in_file)[-1]
-        out_file = os.path.splitext(out_file)[0] + '.fastq.gz'
+        out_file = out_file.split(os.path.extsep)[0] + '.fastq.gz'
         out_file = os.path.join('fastq', out_file)
         yield [in_file, out_file]
 
