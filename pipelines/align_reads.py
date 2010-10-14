@@ -48,7 +48,7 @@ def fastq_to_sai(input_file, output_file):
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('Aligning sequences', cmd_dict['infile'], cmd_dict['outfile'])
-    bwacmd = '%(bwa)s aln -t %(threads)s %(genome)s %(infile)s > %(outfile)s'
+    bwacmd = '%(bwa)s aln -t %(threads)s %(reference)s %(infile)s > %(outfile)s'
     call(bwacmd, cmd_dict)
 
 # Merge paired ends to SAM
@@ -95,7 +95,7 @@ def sam_to_bam(input_file, output_file):
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('Converting SAM file to BAM', cmd_dict['infile'], cmd_dict['outfile'])
-    sam_cmd = '%(samtools)s import %(genome)s.fai %(infile)s %(outfile)s'
+    sam_cmd = '%(samtools)s import %(reference)s.fai %(infile)s %(outfile)s'
     call(sam_cmd, cmd_dict)
 
 # Sort BAM file
@@ -144,8 +144,8 @@ def calculate_coverage(input_file, output_file):
     cmd_dict['outfile'] = output_file
     pmsg('Coverage calculations', cmd_dict['infile'], cmd_dict['outfile'])
     gatk_cmd = '%(gatk)s --analysis_type DepthOfCoverage ' + \
-            '--reference_sequence %(genome)s ' + \
-            '--intervals %(target)s ' + \
+            '--reference_sequence %(reference)s ' + \
+            '--intervals %(target_interval)s ' + \
             '--input_file %(infile)s ' + \
             '--out %(outfile)s ' + \
             '--minMappingQuality 10 ' + \

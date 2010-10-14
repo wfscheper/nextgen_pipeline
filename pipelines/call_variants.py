@@ -44,8 +44,8 @@ def indel_genotyping(input_file, output_file):
     pmsg('Indel Genotyping', input_file, output_file)
     gatk_cmd = '%(gatk)s ' + \
             '--analysis_type IndelGenotyperV2 ' + \
-            '--reference_sequence %(genome)s ' + \
-            '--intervals %(target)s ' + \
+            '--reference_sequence %(reference)s ' + \
+            '--intervals %(target_interval)s ' + \
             '--input_file %(infile)s ' + \
             '--out %(outfile)s ' + \
             '--bedOutput %(outfile_bed)s'
@@ -63,9 +63,9 @@ def snp_genotyping(input_file, output_file):
     pmsg('SNP Genotyping', cmd_dict['infile'], cmd_dict['outfile'])
     gatk_cmd = '%(gatk)s ' + \
             '--analysis_type UnifiedGenotyper ' + \
-            '--reference_sequence %(genome)s ' + \
+            '--reference_sequence %(reference)s ' + \
             '--DBSNP %(dbsnp)s ' + \
-            '--intervals %(target)s ' + \
+            '--intervals %(target_interval)s ' + \
             '--input_file %(infile)s ' + \
             '--out %(outfile)s ' + \
             '--standard_min_confidence_threshold_for_calling 30.0 ' + \
@@ -90,7 +90,7 @@ def filter_indels(input_file, output_file):
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('Filter Indels', input_file, output_file)
-    filter_cmd = '%(filterIndels)s ' + \
+    filter_cmd = '%(filter_indels)s ' + \
             '--calls %(infile)s ' + \
             '--max_cons_av_mm 3.0 ' + \
             '--max_cons_nqs_av_mm 0.5 ' + \
@@ -110,7 +110,7 @@ def create_indel_mask(input_file, output_file):
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('Indel Masking', cmd_dict['infile'], cmd_dict['outfile'])
-    python_cmd = '%(makeIndelMask)s ' + \
+    python_cmd = '%(make_indel_mask)s ' + \
             '%(infile)s ' + \
             '10 ' + \
             '%(outfile)s'
@@ -130,7 +130,7 @@ def filter_snps(input_files, output_file):
     pmsg('Filter SNPs', ', '.join(input_files), cmd_dict['outfile'])
     gatk_cmd = '%(gatk)s ' + \
             '--analysis_type VariantFiltration ' + \
-            '--reference_sequence %(genome)s ' + \
+            '--reference_sequence %(reference)s ' + \
             '--out %(outfile)s ' + \
             '--rodBind:variant,VCF %(snpfile)s ' + \
             '--rodBind:mask,Bed %(maskfile)s ' + \

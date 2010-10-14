@@ -20,7 +20,7 @@ def call_count_covariates(input_file, output_file):
     cmd_dict['outfile'] = output_file
     pmsg('Count Covariates', cmd_dict['infile'], cmd_dict['outfile'])
     gatk_cmd = '%(gatk)s --analysis_type CountCovariates ' + \
-            '--reference_sequence %(genome)s ' + \
+            '--reference_sequence %(reference)s ' + \
             '--DBSNP %(dbsnp)s ' + \
             '--input_file %(infile)s ' + \
             '--recal_file %(outfile)s ' + \
@@ -63,7 +63,7 @@ def recalibrate_quality_scores(input_files, output_file):
     cmd_dict['outfile'] = output_file
     pmsg('QS Recalibration', ', '.join(input_files), output_file)
     gatk_cmd = '%(gatk)s --analysis_type TableRecalibration ' + \
-            '--reference_sequence %(genome)s ' + \
+            '--reference_sequence %(reference)s ' + \
             '--input_file %(bam)s ' + \
             '--recal_file %(recal_data)s ' + \
             '--out %(outfile)s'
@@ -91,7 +91,7 @@ def create_intervals(input_file, output_file):
     cmd_dict['outfile'] = output_file
     pmsg('Interval Creation', input_file, output_file)
     gatk_cmd = '%(gatk)s --analysis_type RealignerTargetCreator ' + \
-            '--reference_sequence %(genome)s ' + \
+            '--reference_sequence %(reference)s ' + \
             '--DBSNP %(dbsnp)s ' + \
             '--input_file %(infile)s ' + \
             '--out %(outfile)s'
@@ -111,7 +111,7 @@ def local_realignment(input_files, output_file):
     cmd_dict['outfile'] = output_file
     pmsg('Local Realignment', ', '.join(input_files), output_file)
     gatk_cmd = '%(gatk)s --analysis_type IndelRealigner ' + \
-            '--reference_sequence %(genome)s ' + \
+            '--reference_sequence %(reference)s ' + \
             '--DBSNP %(dbsnp)s ' + \
             '--input_file %(recalibrated)s ' + \
             '--targetIntervals %(indel_intervals)s ' + \
