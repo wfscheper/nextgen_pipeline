@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from ConfigParser import ConfigParser, SafeConfigParser
+from ConfigParser import SafeConfigParser
 from glob import iglob as glob
 from log import quick_start_log
 from optparse import OptionParser
@@ -95,7 +95,7 @@ if __name__ == '__main__':
             # user did not specify a stage, use default
             start_stage = pipeline_stages[options.pipeline]['default']
 
-        # user specified thread count, capped at the number of cpus
+        # user specified job count, capped at the number of cpus
         if options.jobs:
             NUM_JOBS = options.jobs if options.jobs <= ncpus else ncpus
         else:
