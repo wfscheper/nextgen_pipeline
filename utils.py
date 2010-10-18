@@ -6,7 +6,18 @@ import subprocess
 
 DEBUG_COMMAND = 'touch %(outfile)s'
 
-CMD_DICT = {}
+CMD_DICT = {
+    # defaults
+    'bwa': '`which bwa`',
+    'filter_indels': '`which filterSingleSampleCalls.pl`',
+    'gatk': '`which gatk.sh`',
+    'make_indel_mask': '`makeIndelMask.py`',
+    'picard': '`which picard.sh`',
+    'samtools': '`which samtools`',
+    'header_template': 'header.template',
+    'threads': '4',
+    'window_size': '200'
+}
 
 paired_re = re.compile(r'(?P<line>\w+)_s_(?P<lane>\d+)_(?P<pair>[12])(?P<rest>.*)')
 unpaired_re = re.compile(r'(?P<line>\w+)_s_(?P<lane>\d+)(?P<ext>.*)')
