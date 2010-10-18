@@ -1,1 +1,1 @@
-pipelines = ['prepare_bamfile', 'recalibrate_qs', 'call_variants']
+pipelines = ['align_reads', 'recalibrate_qs', 'call_variants']
