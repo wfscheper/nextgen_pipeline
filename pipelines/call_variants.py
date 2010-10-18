@@ -47,6 +47,7 @@ def indel_genotyping(input_file, output_file):
             '--reference_sequence %(reference)s ' + \
             '--intervals %(target_interval)s ' + \
             '--input_file %(infile)s ' + \
+            '--window_size %(window_size)s ' + \
             '--out %(outfile)s ' + \
             '--bedOutput %(outfile_bed)s'
     call(gatk_cmd, cmd_dict)
