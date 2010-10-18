@@ -14,19 +14,19 @@ from utils import CMD_DICT, call, check_if_clean, pmsg, unpaired_re, unpaired_st
 
 
 def indel_genoytping_generator():
-    for infile in glob('fixmate/*.bam'):
+    for infile in glob('recalibrated/*.bam'):
         raw_file = '%(line)s_s_%(lane)s.indels_raw.vcf' % \
                 unpaired_re.search(infile).groupdict()
         yield [infile, 'indels/%s' % (raw_file)]
 
 def snp_genoytping_generator():
-    for infile in glob('fixmate/*.bam'):
+    for infile in glob('recalibrated/*.bam'):
         outfile = '%(line)s_s_%(lane)s.snps_raw.vcf' % \
                 unpaired_re.search(infile).groupdict()
         yield [infile, 'snps/%s' % (outfile)]
 
 @jobs_limit(1)
-@files(["intervals/", "prepped/", "realigned/", "recalibrated/"], None)
+@files(["fixmate", "intervals/", "prepped/", "realigned/"], None)
 @check_if_uptodate(check_if_clean)
 def clean_up(input_files, output_file):
     print('Cleaning up intermeidate files: %s' % ", ".join(input_files))

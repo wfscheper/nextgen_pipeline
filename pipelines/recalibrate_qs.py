@@ -28,11 +28,10 @@ def call_count_covariates(input_file, output_file):
             '--num_threads 2 '
     call(gatk_cmd, cmd_dict)
 
-def count_covariates_generator():
-    for file in glob('deduped/*.bam'):
-        filename = 'covariates/%s' % (unpaired_strings['recal_data'] % \
-                unpaired_re.search(file).groupdict())
-        yield [file, filename]
+def create_intervals_generator():
+    for infile in glob('deduped/*.bam'):
+        outfile = '%(line)s_s_%(lane)s.intervals' % unpaired_re.search(infile).groupdict()
+        yield [infile, 'intervals/%s' % outfile]
 
 @jobs_limit(1)
 @files(["bam/", "clipped/", "sam/", "sorted/"], None)
@@ -42,48 +41,9 @@ def clean_up(input_files, output_file):
     print('Cleaning up intermeidate files: %s' % ", ".join(input_files))
     call('rm -rf %s' % " ".join(input_files), {}, is_logged=False)
 
-# Calculate Covariates for Quality Score Recalibration
-@follows(clean_up, mkdir('covariates', 'logs'))
-@files(count_covariates_generator)
-def count_covariates(input_file, output_file):
-    '''Run CounCovariates on files in sorted/'''
-    call_count_covariates(input_file, output_file)
-
-# Apply Quality Score Recalibration
-@follows(mkdir('recalibrated'))
-@transform(count_covariates,
-           regex(r'^covariates/(.+).prepped.csv$'),
-           inputs([r'covariates/\1.prepped.csv', r'prepped/\1.prepped.bam']),
-           r'recalibrated/\1.recalibrated.bam')
-def recalibrate_quality_scores(input_files, output_file):
-    '''Apply Recalibrated QSs to BAM file'''
-    cmd_dict = CMD_DICT.copy()
-    cmd_dict['recal_data'] = input_files[0]
-    cmd_dict['bam'] = input_files[1]
-    cmd_dict['outfile'] = output_file
-    pmsg('QS Recalibration', ', '.join(input_files), output_file)
-    gatk_cmd = '%(gatk)s --analysis_type TableRecalibration ' + \
-            '--reference_sequence %(reference)s ' + \
-            '--input_file %(bam)s ' + \
-            '--recal_file %(recal_data)s ' + \
-            '--out %(outfile)s'
-    call(gatk_cmd, cmd_dict)
-    samtools_cmd = '%(samtools)s index %(outfile)s'
-    call(samtools_cmd, cmd_dict)
-
-# Generate QS Recalibration Covariates
-@transform(recalibrate_quality_scores,
-           regex(r'^recalibrated/(.+).recalibrated.bam$'),
-           r'covariates/\1.recalibrated.csv')
-def recount_covariates(input_file, output_file):
-    '''Run CountCovariates on files in recalibrated/'''
-    call_count_covariates(input_file, output_file)
-
 # Find candidate intervals for realignment
-@follows(recount_covariates, mkdir('intervals'))
-@transform(recalibrate_quality_scores,
-           regex(r'^recalibrated/(.+)\.recalibrated\.bam$'),
-           r'intervals/\1.intervals')
+@follows(clean_up, mkdir('intervals', 'logs'))
+@files(create_intervals_generator)
 def create_intervals(input_file, output_file):
     '''Determine indel candidate intervals'''
     cmd_dict = CMD_DICT.copy()
@@ -101,27 +61,25 @@ def create_intervals(input_file, output_file):
 @follows(mkdir('realigned'))
 @transform(create_intervals,
            regex(r'^intervals/(.+)\.intervals$'),
-           inputs([r'recalibrated/\1.recalibrated.bam', r'intervals/\1.intervals']),
+           inputs([r'deduped/\1.deduped.bam', r'intervals/\1.intervals']),
            r'realigned/\1.realigned.bam')
 def local_realignment(input_files, output_file):
     '''Realign reads around candidate indels'''
     cmd_dict = CMD_DICT.copy()
-    cmd_dict['recalibrated'] = input_files[0]
+    cmd_dict['bam_file'] = input_files[0]
     cmd_dict['indel_intervals'] = input_files[1]
     cmd_dict['outfile'] = output_file
     pmsg('Local Realignment', ', '.join(input_files), output_file)
     gatk_cmd = '%(gatk)s --analysis_type IndelRealigner ' + \
             '--reference_sequence %(reference)s ' + \
             '--DBSNP %(dbsnp)s ' + \
-            '--input_file %(recalibrated)s ' + \
+            '--input_file %(bam_file)s ' + \
             '--targetIntervals %(indel_intervals)s ' + \
             '--out %(outfile)s'
     call(gatk_cmd, cmd_dict)
-    samtools_cmd = '%(samtools)s index %(outfile)s'
-    call(samtools_cmd, cmd_dict)
 
 # Fix mate info post realignment
-@follows(local_realignment, mkdir('fixmate'))
+@follows(mkdir('fixmate'))
 @transform(local_realignment,
            regex(r'^realigned/(.+)\.realigned\.bam$'),
            r'fixmate/\1.fixmate.bam')
@@ -140,14 +98,53 @@ def fix_mate_realigned(input_file, output_file):
     samtools_cmd = '%(samtools)s index %(outfile)s'
     call(samtools_cmd, cmd_dict, is_logged=False)
 
+# Calculate Covariates for Quality Score Recalibration
+@follows(mkdir('covariates'))
+@transform(fix_mate_realigned,
+           regex(r'^fixmate/(.+)\.fixmate.bam'),
+           r'covariates/\1.precalibration.csv')
+def count_covariates(input_file, output_file):
+    '''Run CounCovariates on files in sorted/'''
+    call_count_covariates(input_file, output_file)
+
+# Apply Quality Score Recalibration
+@follows(mkdir('recalibrated'))
+@transform(count_covariates,
+           regex(r'^covariates/(.+).precalibration.csv$'),
+           inputs([r'covariates/\1.precalibration.csv', r'fixmate/\1.fixmate.bam']),
+           r'recalibrated/\1.recalibrated.bam')
+def recalibrate_quality_scores(input_files, output_file):
+    '''Apply Recalibrated QSs to BAM file'''
+    cmd_dict = CMD_DICT.copy()
+    cmd_dict['recal_data'] = input_files[0]
+    cmd_dict['bam'] = input_files[1]
+    cmd_dict['outfile'] = output_file
+    pmsg('QS Recalibration', ', '.join(input_files), output_file)
+    gatk_cmd = '%(gatk)s --analysis_type TableRecalibration ' + \
+            '--reference_sequence %(reference)s ' + \
+            '--input_file %(bam)s ' + \
+            '--recal_file %(recal_data)s ' + \
+            '--out %(outfile)s'
+    call(gatk_cmd, cmd_dict)
+    samtools_cmd = '%(samtools)s index %(outfile)s'
+    call(samtools_cmd, cmd_dict, is_logged=False)
+
+# Generate QS Recalibration Covariates
+@transform(recalibrate_quality_scores,
+           regex(r'^recalibrated/(.+).recalibrated.bam$'),
+           r'covariates/\1.postcalibration.csv')
+def recount_covariates(input_file, output_file):
+    '''Run CountCovariates on files in recalibrated/'''
+    call_count_covariates(input_file, output_file)
+
 stages_dict = {
     'clean_up': clean_up,
-    'count': count_covariates,
-    'recalibrate': recalibrate_quality_scores,
-    'recount': recount_covariates,
     'intervals': create_intervals,
     'realignment': local_realignment,
     'fixmate': fix_mate_realigned,
-    'default': fix_mate_realigned,
+    'count': count_covariates,
+    'recalibrate': recalibrate_quality_scores,
+    'recount': recount_covariates,
+    'default': recount_covariates,
 }
 
