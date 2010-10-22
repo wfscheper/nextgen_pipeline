@@ -8,7 +8,8 @@ import datetime
 import multiprocessing
 import os
 import sys
-import utils
+
+from utils import CMD_DICT
 
 
 PIPELINE_PATH = 'pipelines.'
@@ -64,7 +65,7 @@ if __name__ == '__main__':
 
     for section in config.sections():
         for option in config.options(section):
-            utils.CMD_DICT[option] = config.get(section, option)
+            CMD_DICT[option] = config.get(section, option)
 
     # get number of cpus on machine
     ncpus = multiprocessing.cpu_count()

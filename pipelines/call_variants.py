@@ -4,33 +4,33 @@ Pipeline for calling variants.
 Depends on recalibration of quality scores being successfully run, and
 generating an indexed, recalibrated bam file.
 '''
-import re
 import os
 
 from glob import iglob as glob
 from ruffus import check_if_uptodate, files, follows, inputs, jobs_limit, mkdir, regex, transform
 
-from utils import CMD_DICT, call, check_if_clean, pmsg, unpaired_re, unpaired_strings
+
+from utils import CMD_DICT, call, check_if_clean, pmsg, filename_re
 
 
 def indel_genoytping_generator():
     for infile in glob('recalibrated/*.bam'):
         raw_file = '%(line)s_s_%(lane)s.indels_raw.vcf' % \
-                unpaired_re.search(infile).groupdict()
+                filename_re.search(infile).groupdict()
         yield [infile, 'indels/%s' % (raw_file)]
 
 def snp_genoytping_generator():
     for infile in glob('recalibrated/*.bam'):
         outfile = '%(line)s_s_%(lane)s.snps_raw.vcf' % \
-                unpaired_re.search(infile).groupdict()
+                filename_re.search(infile).groupdict()
         yield [infile, 'snps/%s' % (outfile)]
 
 @jobs_limit(1)
-@files(["fixmate", "intervals/", "prepped/", "realigned/"], None)
+@files(['fixmate', 'intervals/', 'deduped/', 'realigned/'], None)
 @check_if_uptodate(check_if_clean)
 def clean_up(input_files, output_file):
-    print('Cleaning up intermeidate files: %s' % ", ".join(input_files))
-    call('rm -rf %s' % " ".join(input_files), {}, is_logged=False)
+    print('Cleaning up intermeidate files: %s' % ', '.join(input_files))
+    call('rm -rf %s' % ' '.join(input_files), {}, is_logged=False)
 
 # Call Indels
 @follows(clean_up, mkdir('indels'))
@@ -40,7 +40,7 @@ def indel_genotyping(input_file, output_file):
     cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
-    cmd_dict['outfile_bed'] = os.path.splitext(output_file)[0] + ".bed"
+    cmd_dict['outfile_bed'] = os.path.splitext(output_file)[0] + '.bed'
     pmsg('Indel Genotyping', input_file, output_file)
     gatk_cmd = '%(gatk)s ' + \
             '--analysis_type IndelGenotyperV2 ' + \
@@ -138,9 +138,9 @@ def filter_snps(input_files, output_file):
             '--maskName InDel ' + \
             '--clusterWindowSize 10 ' + \
             '--filterExpression %(standard_filter)s ' + \
-            '--filterName \"StandardFilter\" ' + \
+            '--filterName \'StandardFilter\' ' + \
             '--filterExpression %(hard_to_validate_filter)s ' + \
-            '--filterName \"HardToValidateFilter\"'
+            '--filterName \'HardToValidateFilter\''
     call(gatk_cmd, cmd_dict)
 
 stages_dict = {

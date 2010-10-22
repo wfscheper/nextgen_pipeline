@@ -1,6 +1,6 @@
 '''
 Recalibrates quality scores and generates data needed for checking what effect
-recalibration had on quality scores. 
+recalibration had on quality scores.
 
 Depends on a properly aligned, sorted and indexed bam file.
 
@@ -11,7 +11,7 @@ import os
 from glob import iglob as glob
 from ruffus import check_if_uptodate, files, follows, inputs, jobs_limit, mkdir, regex, transform
 
-from utils import call, check_if_clean, pmsg, unpaired_re, unpaired_strings, CMD_DICT
+from utils import CMD_DICT, call, check_if_clean, pmsg, filename_re
 
 
 def call_count_covariates(input_file, output_file):
@@ -30,16 +30,16 @@ def call_count_covariates(input_file, output_file):
 
 def create_intervals_generator():
     for infile in glob('deduped/*.bam'):
-        outfile = '%(line)s_s_%(lane)s.intervals' % unpaired_re.search(infile).groupdict()
+        outfile = '%(line)s_s_%(lane)s.intervals' % filename_re.search(infile).groupdict()
         yield [infile, 'intervals/%s' % outfile]
 
 @jobs_limit(1)
-@files(["bam/", "clipped/", "sam/", "sorted/"], None)
+@files(['bam/', 'clipped/', 'sam/', 'sorted/'], None)
 @check_if_uptodate(check_if_clean)
 def clean_up(input_files, output_file):
     '''Clean up intermediate files'''
-    print('Cleaning up intermeidate files: %s' % ", ".join(input_files))
-    call('rm -rf %s' % " ".join(input_files), {}, is_logged=False)
+    print('Cleaning up intermeidate files: %s' % ', '.join(input_files))
+    call('rm -rf %s' % ' '.join(input_files), {}, is_logged=False)
 
 # Find candidate intervals for realignment
 @follows(clean_up, mkdir('intervals', 'logs'))
