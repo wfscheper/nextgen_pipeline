@@ -11,9 +11,8 @@ from glob import iglob as glob
 
 from ruffus import follows, files, inputs, jobs_limit, mkdir, regex, transform
 
+from utils import CMD_DICT, call, pmsg, read_group_re
 from zipper import zip
-from utils import call, paired_re, paired_strings, pmsg, read_group_re, saicmp, CMD_DICT
-
 
 def copy_sequence_generator():
     for in_file in glob('staging_area/*'):
@@ -48,7 +47,7 @@ def fastq_to_sai(input_file, output_file):
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
     pmsg('Aligning sequences', cmd_dict['infile'], cmd_dict['outfile'])
-    bwacmd = '%(bwa)s aln -t %(threads)s %(reference)s %(infile)s > %(outfile)s'
+    bwacmd = '%(bwa)s aln -t %(threads)s -f %(outfile)s %(reference)s %(infile)s'
     call(bwacmd, cmd_dict)
 
 # Merge paired ends to SAM
@@ -73,34 +72,38 @@ def make_sam(input_files, output_file):
     pmsg('Generating SAM file', ', '.join(input_files), output_file)
     # sort input files
     input_files.sort(cmp=saicmp)
-    # Run bwa to merge paired ends into SAM file
+    # Run bwa to merge into SAM file
     cmd_dict['infiles'] = ' '.join(input_files)
     cmd_dict['outfile'] = output_file
-    if len(input_files) == 4:
-        cmd_dict['sam_type'] = 'sampe'
-        cmd_dict.update(read_group_re.match(input_files[-1]).groupdict())
-        bwa_cmd = '%(bwa)s %(sam_type)s -i %(read_group)s -m %(sample)s -l %(read_group)s ' + \
-                '-p illumina -f %(outfile)s %(reference)s %(infiles)s'
-    else:
-        cmd_dict['sam_type'] = 'samse'
-        bwa_cmd = '%(bwa)s %(sam_type)s -f %(outfile)s %(reference)s %(infiles)s'
+    cmd_dict.update(read_group_re.match(input_files[-1]).groupdict())
+    bwa_cmd = '%(bwa)s %(sam_type)s -i %(read_group)s -m %(sample)s -l %(read_group)s ' + \
+            '-p illumina -f %(outfile)s %(reference)s %(infiles)s'
     call(bwa_cmd, cmd_dict)
 
-## Convert filtered SAM files to BAM files
-@follows(mkdir('bam'))
-@transform(make_sam, regex(r'^sam/(.+)\.sam$'), r'bam/\1.bam')
-def sam_to_bam(input_file, output_file):
-    '''Convert SAM files to BAM files.'''
-    cmd_dict = CMD_DICT.copy()
-    cmd_dict['infile'] = input_file
-    cmd_dict['outfile'] = output_file
-    pmsg('Converting SAM file to BAM', cmd_dict['infile'], cmd_dict['outfile'])
-    sam_cmd = '%(samtools)s import %(reference)s.fai %(infile)s %(outfile)s'
-    call(sam_cmd, cmd_dict)
+    # if this is single ended, then we need to sort and clip the sam file
+    if cmd_dict['sam_type'] == 'samse':
+        # sort sam file
+        cmd_dict['infile'] = output_file
+        cmd_dict['outfile'] = os.path.splitext(output_file)[0] + '.sorted.sam'
+        pmsg('Sorting SAM file', cmd_dict['infile'], cmd_dict['outfile'])
+        picard_cmd = '%(picard)s SortSam ' + \
+                'INPUT=%(infile)s ' + \
+                'OUTPUT=%(outfile)s ' + \
+                'SORT_ORDER=coordinate ' + \
+                'VALIDATION_STRINGENCY=SILENT'
+        call(picard_cmd, cmd_dict)
+        call('rm %(infile)s', cmd_dict, is_logged=False)
+        # clip reads
+        cmd_dict['infile'] = cmd_dict['outfile']
+        cmd_dict['outfile'] = output_file
+        pmsg('Clipping reads', cmd_dict['infile'], cmd_dict['outfile'])
+        clip_cmd = '%(clip_se_reads)s -o %(outfile)s %(primers)s %(infile)s'
+        call(clip_cmd, cmd_dict)
+        call('rm %(infile)s', cmd_dict, is_logged=False)
 
 # Sort BAM file
 @follows(mkdir('sorted'))
-@transform(sam_to_bam, regex(r'^bam/(.+)\.bam$'), r'sorted/\1.sorted.bam')
+@transform(make_sam, regex(r'^sam/(.+)\.sam'), r'sorted/\1.sorted.bam')
 def sort_bam(input_file, output_file):
     '''Sort BAM files by coordinate.'''
     cmd_dict = CMD_DICT.copy()
@@ -123,15 +126,18 @@ def remove_duplicates(input_file, output_file):
     cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
-    cmd_dict['metrics'] = output_file.rstrip('bam') + 'metrics'
-    pmsg('Removing duplicates', input_file, output_file)
-    picard_cmd = '%(picard)s MarkDuplicates ' + \
-            'INPUT=%(infile)s ' + \
-            'OUTPUT=%(outfile)s ' + \
-            'METRICS_FILE=%(metrics)s ' + \
-            'REMOVE_DUPLICATES=true ' + \
-            'VALIDATION_STRINGENCY=SILENT '
-    call(picard_cmd, cmd_dict)
+    if cmd_dict['sam_type'] == 'sampe':
+        cmd_dict['metrics'] = output_file.rstrip('bam') + 'metrics'
+        pmsg('Removing duplicates', input_file, output_file)
+        picard_cmd = '%(picard)s MarkDuplicates ' + \
+                'INPUT=%(infile)s ' + \
+                'OUTPUT=%(outfile)s ' + \
+                'METRICS_FILE=%(metrics)s ' + \
+                'REMOVE_DUPLICATES=true ' + \
+                'VALIDATION_STRINGENCY=SILENT '
+        call(picard_cmd, cmd_dict)
+    else:
+        call('ln %(infile)s %(outfile)s', cmd_dict, is_logged=False)
     samtools_cmd = '%(samtools)s index %(outfile)s'
     call(samtools_cmd, cmd_dict, is_logged=False)
 
@@ -157,7 +163,6 @@ stages_dict = {
     'copy': copy_sequence,
     'align': fastq_to_sai,
     'sam': make_sam,
-    'bam': sam_to_bam,
     'sort': sort_bam,
     'dedupe': remove_duplicates,
     'coverage': calculate_coverage,
