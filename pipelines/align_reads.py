@@ -5,14 +5,14 @@ Required for any pipelines that use the Genome Analysis Toolkit.
 
 Currnetly, this means quality score recalibration and variant calling.
 '''
+import gzip
 import os
 from Bio import SeqIO
 from glob import iglob as glob
 
-from ruffus import follows, files, inputs, jobs_limit, mkdir, regex, transform
+from ruffus import follows, files, inputs, mkdir, regex, transform
 
 from utils import CMD_DICT, call, pmsg, read_group_re
-from zipper import zip
 
 def copy_sequence_generator():
     for in_file in glob('staging_area/*'):
@@ -24,20 +24,27 @@ def copy_sequence_generator():
 # Copy sequence from staging area
 @follows(mkdir('fastq'))
 @files(copy_sequence_generator)
-@jobs_limit(2)
 def copy_sequence(input_file, output_file):
     '''Copy sequence files from staging area'''
-    cmd_dict = CMD_DICT.copy()
-    cmd_dict['infile'] = input_file
-    cmd_dict['outfile'] = output_file
-    cmd_dict['outfile_prefix'] = output_file.rstrip('.gz')
-    pmsg('Copying sequence files', input_file, cmd_dict['outfile_prefix'])
+    pmsg('Copying sequence files', input_file, output_file)
+    input_file_handle = gzip.open(input_file, 'rb') if input_file.endswith('gz') \
+            else open(input_file)
+    output_file_handle = gzip.open(output_file, 'wb')
     try:
-        SeqIO.convert(cmd_dict['infile'], 'fastq-illumina', cmd_dict['outfile_prefix'], 'fastq-sanger')
+        SeqIO.convert(input_file_handle, 'fastq-illumina', output_file_handle, 'fastq')
     except ValueError:
-        call('cp %(infile)s %(outfile_prefix)s', cmd_dict, is_logged=False)
-    pmsg('Compressing file', cmd_dict['outfile_prefix'], cmd_dict['outfile'])
-    zip(cmd_dict['outfile_prefix'])
+        # this file is already in fastq format
+        if isinstance(input_file_handle, gzip.GzipFile):
+            # this file is already compressed, so just copy it via cp
+            call('cp %(infile)s %(outfile)s', {'infile': input_file, 'outfile': output_file},
+                    is_logged=False)
+        else:
+            # gzip file
+            call('gzip -c %(infile)s > %(outfile)s',
+                    {'infile': input_file, 'outfile': output_file}, is_logged=False)
+    finally:
+        input_file_handle.close()
+        output_file_handle.close()
 
 @follows(mkdir('sai'), mkdir('logs'))
 @transform(copy_sequence, regex(r'^fastq/(.+)_sequence\.fastq\.gz$'), r'sai/\1.sai')
