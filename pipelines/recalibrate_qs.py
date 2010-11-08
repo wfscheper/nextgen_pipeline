@@ -34,7 +34,7 @@ def create_intervals_generator():
         yield [infile, 'intervals/%s' % outfile]
 
 @jobs_limit(1)
-@files(['bam/', 'clipped/', 'sam/', 'sorted/'], None)
+@files(['sam/', 'sorted/'], None)
 @check_if_uptodate(check_if_clean)
 def clean_up(input_files, output_file):
     '''Clean up intermediate files'''
