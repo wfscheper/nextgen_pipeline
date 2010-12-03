@@ -1,13 +1,15 @@
 #!/usr/bin/env python
-from ConfigParser import SafeConfigParser
-from glob import iglob as glob
-from log import quick_start_log
-from optparse import OptionParser
-from ruffus import pipeline_run, pipeline_printout_graph
 import datetime
 import multiprocessing
 import os
 import sys
+
+from ConfigParser import SafeConfigParser
+from glob import iglob as glob
+from log import quick_start_log
+from optparse import OptionParser
+
+from ruffus import pipeline_run, pipeline_printout_graph
 
 from utils import CMD_DICT
 
@@ -38,8 +40,7 @@ def show_pipeline_stage_help():
 #==================================================================================================
 # Config command line parser
 #==================================================================================================
-parser = OptionParser()
-parser.add_option('-p', '--pipeline', dest='pipeline', default=None, help='pipeline to run')
+parser = OptionParser("run.py [option]... pipeline...")
 parser.add_option('-s', '--stage', dest='stage', help='stage of pipeline to run')
 parser.add_option('-t', '--threads', action='store', type='int', dest='threads',
                   default=None, help='number of threads to use')
@@ -56,6 +57,9 @@ parser.add_option('--graph', dest='print_graph', default=False, action='store_tr
 if __name__ == '__main__':
     pipeline_stages = {}
     (options, args) = parser.parse_args()
+    if len(args) < 1:
+        print(parser.usage + '\n')
+        show_pipeline_help()
 
     # Configuration parsing
     if not os.path.isfile(options.config):
@@ -71,30 +75,26 @@ if __name__ == '__main__':
     ncpus = multiprocessing.cpu_count()
 
     # load the pipeline(s) request by the user
-    if options.pipeline:
-        pipelines = [ pipeline.strip() for pipeline in options.pipeline.split(',') ]
-    else:
-        from pipelines import pipelines
-
-    for pipeline in pipelines:
+    for arg in args:
         try:
-            pipeline = __import__(PIPELINE_PATH + pipeline, globals(), locals(), ['*'])
+            pipeline = __import__(PIPELINE_PATH + arg, globals(), locals(), ['*'])
         except (ImportError, TypeError) as e:
             # either no pipeline was requested or a missing/non-existant
             # pipeline was chosen
+            print(parser.usage + '\n')
             show_pipeline_help()
-        pipeline_stages.update({options.pipeline: pipeline.stages_dict})
+        pipeline_stages.update({arg: pipeline.stages_dict})
 
         # did the user specify a stage
         if options.stage:
-            if options.stage not in pipeline_stages[options.pipeline].keys():
+            if options.stage not in pipeline_stages[arg].keys():
                 # missing or non-existant stage chosen
                 show_pipeline_stage_help()
             else:
-                start_stage = pipeline_stages[options.pipeline][options.stage]
+                start_stage = pipeline_stages[arg][options.stage]
         else:
             # user did not specify a stage, use default
-            start_stage = pipeline_stages[options.pipeline]['default']
+            start_stage = pipeline_stages[arg]['default']
 
         # user specified job count, capped at the number of cpus
         if options.jobs:
