@@ -144,6 +144,7 @@ def remove_duplicates(input_file, output_file):
                 'VALIDATION_STRINGENCY=SILENT '
         call(picard_cmd, cmd_dict)
     else:
+        pmsg('Linking files', input_file, output_file)
         call('ln -s %(infile)s %(outfile)s', cmd_dict, is_logged=False)
     samtools_cmd = '%(samtools)s index %(outfile)s'
     call(samtools_cmd, cmd_dict, is_logged=False)
