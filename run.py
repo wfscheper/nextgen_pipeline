@@ -5,7 +5,7 @@ import os
 import sys
 
 from ConfigParser import SafeConfigParser
-from glob import iglob as glob
+from glob import iglob, glob
 from log import quick_start_log
 from optparse import OptionParser
 
@@ -18,7 +18,7 @@ PIPELINE_PATH = 'pipelines.'
 
 def show_pipeline_help():
     print "Please choose one of the following pipelines:"
-    for pipeline in glob('%s/pipelines/*.py' % sys.path[0]):
+    for pipeline in iglob('%s/pipelines/*.py' % sys.path[0]):
         if '__init__' in pipeline: continue
         pipeline = os.path.splitext(pipeline.rpartition(os.path.sep)[-1])[0]
         print '\t%s' % (pipeline)
@@ -58,8 +58,8 @@ if __name__ == '__main__':
     pipeline_stages = {}
     (options, args) = parser.parse_args()
     if len(args) < 1:
-        print(parser.usage + '\n')
-        show_pipeline_help()
+        from pipelines import pipelines
+        args = pipelines
 
     # Configuration parsing
     if not os.path.isfile(options.config):
