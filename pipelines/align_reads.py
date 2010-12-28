@@ -8,14 +8,14 @@ Currnetly, this means quality score recalibration and variant calling.
 import gzip
 import os
 from Bio import SeqIO
-from glob import iglob as glob
+from glob import iglob, glob
 
 from ruffus import follows, files, inputs, mkdir, regex, transform
 
 from utils import CMD_DICT, call, pmsg, read_group_re
 
 def copy_sequence_generator():
-    for in_file in glob('staging_area/*'):
+    for in_file in iglob('staging_area/*'):
         out_file = os.path.split(in_file)[-1]
         out_file = out_file.split(os.path.extsep)[0] + '.fastq.gz'
         out_file = os.path.join('fastq', out_file)
@@ -149,22 +149,22 @@ def remove_duplicates(input_file, output_file):
     samtools_cmd = '%(samtools)s index %(outfile)s'
     call(samtools_cmd, cmd_dict, is_logged=False)
 
-@follows(mkdir('coverage'))
-@transform(remove_duplicates, regex(r'^deduped/(.+)\.deduped\.bam$'), r'coverage/\1.coverage')
-def calculate_coverage(input_file, output_file):
+@follows(remove_duplicates, mkdir('coverage'))
+@files(glob('deduped/*.bam'), 'coverage/merged.coverage')
+def calculate_coverage(input_files, output_file):
     '''Calculate coverage statistics'''
     cmd_dict = CMD_DICT.copy()
-    cmd_dict['infile'] = input_file
+    cmd_dict['infiles'] = ' '.join([ '--input_file %s' % f for f in input_files ])
     cmd_dict['outfile'] = output_file
-    pmsg('Coverage calculations', cmd_dict['infile'], cmd_dict['outfile'])
+    pmsg('Coverage calculations', ', '.join(input_files), output_file)
     gatk_cmd = '%(gatk)s --analysis_type DepthOfCoverage ' + \
             '--reference_sequence %(reference)s ' + \
             '--intervals %(target_interval)s ' + \
-            '--input_file %(infile)s ' + \
-            '--out %(outfile)s ' + \
             '--minMappingQuality 10 ' + \
             '--minBaseQuality 10 ' + \
-            '--omitDepthOutputAtEachBase '
+            '--omitDepthOutputAtEachBase ' + \
+            '%(infiles)s ' + \
+            '--out %(outfile)s'
     call(gatk_cmd, cmd_dict)
 
 stages_dict = {
