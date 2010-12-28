@@ -6,70 +6,53 @@ generating an indexed, recalibrated bam file.
 '''
 import os
 
-from glob import iglob as glob
+from glob import glob, iglob
 from ruffus import check_if_uptodate, files, follows, inputs, jobs_limit, mkdir, regex, transform
 
 
-from utils import CMD_DICT, call, check_if_clean, pmsg, filename_re
+from utils import CMD_DICT, call, check_if_clean, pmsg, filename_re, read_group_re
 
 
 def indel_genoytping_generator():
-    for infile in glob('recalibrated/*.bam'):
-        raw_file = '%(line)s_s_%(lane)s.indels_raw.vcf' % \
-                filename_re.search(infile).groupdict()
-        yield [infile, 'indels/%s' % (raw_file)]
+    '''
+    Generates tuples of input files and their resulting output file for indel
+    genotyper
 
-def snp_genoytping_generator():
-    for infile in glob('recalibrated/*.bam'):
-        outfile = '%(line)s_s_%(lane)s.snps_raw.vcf' % \
-                filename_re.search(infile).groupdict()
-        yield [infile, 'snps/%s' % (outfile)]
+    Groups files by sample name and returns a list of those files, and the
+    output file they should generate: <sample name>.indels_raw.vcf
+    '''
+    infiles_by_sample = {}
+    for infile in iglob('recalibrated/*.bam'):
+        sample = read_group_re.match(infile).groupdict()['sample']
+        infiles_by_sample[sample] = infiles_by_sample.get(sample, []) + [infile]
+    for sample, infiles in infiles_by_sample.items():
+        yield [ infiles, 'indels/%s.indels_raw.vcf' % sample ]
 
 @jobs_limit(1)
-@files(['fixmate', 'intervals/', 'deduped/', 'realigned/'], None)
+@files(['fixmate/', 'intervals/', 'deduped/', 'realigned/'], None)
 @check_if_uptodate(check_if_clean)
 def clean_up(input_files, output_file):
+    '''Clean up intermediate files from recalibration stage'''
     print('Cleaning up intermeidate files: %s' % ', '.join(input_files))
     call('rm -rf %s' % ' '.join(input_files), {}, is_logged=False)
-
-# Call Indels
-@follows(clean_up, mkdir('indels'))
-@files(indel_genoytping_generator)
-def indel_genotyping(input_file, output_file):
-    '''Call Indels'''
-    cmd_dict = CMD_DICT.copy()
-    cmd_dict['infile'] = input_file
-    cmd_dict['outfile'] = output_file
-    cmd_dict['outfile_bed'] = os.path.splitext(output_file)[0] + '.bed'
-    pmsg('Indel Genotyping', input_file, output_file)
-    gatk_cmd = '%(gatk)s ' + \
-            '--analysis_type IndelGenotyperV2 ' + \
-            '--reference_sequence %(reference)s ' + \
-            '--intervals %(target_interval)s ' + \
-            '--input_file %(infile)s ' + \
-            '--window_size %(window_size)s ' + \
-            '--out %(outfile)s ' + \
-            '--bedOutput %(outfile_bed)s'
-    call(gatk_cmd, cmd_dict)
 
 # Call SNPs
 @jobs_limit(1)
 @follows(clean_up, mkdir('snps'))
-@files(snp_genoytping_generator)
-def snp_genotyping(input_file, output_file):
+@files(glob('recalibrated/*.bam'), 'snps/merged.snps_raw.vcf')
+def snp_genotyping(input_files, output_file):
     '''Call SNP variants'''
+    pmsg('SNP Genotyping', ', '.join(input_files), output_file)
     cmd_dict = CMD_DICT.copy()
-    cmd_dict['infile'] = input_file
+    cmd_dict['infiles'] = ' '.join([ '--input_file %s' % f for f in input_files ])
     cmd_dict['outfile'] = output_file
-    pmsg('SNP Genotyping', cmd_dict['infile'], cmd_dict['outfile'])
     gatk_cmd = '%(gatk)s ' + \
             '--analysis_type UnifiedGenotyper ' + \
             '--reference_sequence %(reference)s ' + \
             '--DBSNP %(dbsnp)s ' + \
             '--intervals %(target_interval)s ' + \
-            '--input_file %(infile)s ' + \
-            '--out %(outfile)s ' + \
-            '--standard_min_confidence_threshold_for_calling 30.0 ' + \
+            '--standard_min_confidence_threshold_for_calling 50 ' + \
+            '--standard_min_confidence_threshold_for_emitting 30 ' + \
             '--annotation AlleleBalance ' + \
             '--annotation DepthOfCoverage ' + \
             '--annotation HomopolymerRun ' + \
@@ -77,79 +60,74 @@ def snp_genotyping(input_file, output_file):
             '--annotation QualByDepth ' + \
             '--annotation RMSMappingQuality ' + \
             '--annotation HaplotypeScore ' + \
-            '--num_threads 8'
+            '--num_threads 7 ' + \
+            '%(infiles)s ' + \
+            '--out %(outfile)s'
     call(gatk_cmd, cmd_dict)
 
-# Filter Indels
-@transform(indel_genotyping,
-           regex(r'^indels/(.+)\.indels_raw.vcf$'),
-           inputs(r'indels/\1.indels_raw.bed'),
-           r'indels/\1.indels_filtered.bed')
-def filter_indels(input_file, output_file):
-    '''Filter indel calls'''
+# Call Indels
+@follows(snp_genotyping, mkdir('indels'))
+@files(indel_genoytping_generator)
+def indel_genotyping(input_files, output_file):
+    '''Call Indels'''
+    pmsg('Indel Genotyping', ', '.join(input_files), output_file)
     cmd_dict = CMD_DICT.copy()
-    cmd_dict['infile'] = input_file
+    cmd_dict['infiles'] = ' '.join([ '--input_file %s' % f for f in input_files ])
     cmd_dict['outfile'] = output_file
-    pmsg('Filter Indels', input_file, output_file)
-    filter_cmd = '%(filter_indels)s ' + \
-            '--calls %(infile)s ' + \
-            '--max_cons_av_mm 3.0 ' + \
-            '--max_cons_nqs_av_mm 0.5 ' + \
-            '--mode ANNOTATE ' + \
-            '> %(outfile)s'
-    call(filter_cmd, cmd_dict, is_logged=False)
+    gatk_cmd = '%(gatk)s ' + \
+            '--analysis_type IndelGenotyperV2 ' + \
+            '--reference_sequence %(reference)s ' + \
+            '--intervals %(target_interval)s ' + \
+            '--window_size %(window_size)s ' + \
+            '%(infiles)s ' + \
+            '--out %(outfile)s'
+    call(gatk_cmd, cmd_dict)
 
 # Create InDel mask
-@follows(filter_indels)
-@transform(indel_genotyping,
-           regex(r'^indels/(.+)\.indels_raw\.vcf$'),
-           inputs(r'indels/\1.indels_raw.bed'),
-           r'indels/\1.indels_mask.bed')
-def create_indel_mask(input_file, output_file):
+@follows(indel_genotyping)
+@files(glob('indels/*.indels_raw.vcf'), 'indels/indels_mask.bed')
+def create_indel_mask(input_files, output_file):
     '''Create Indel Mask'''
+    pmsg('Create Indel Mask', ', '.join(input_files), output_file)
     cmd_dict = CMD_DICT.copy()
-    cmd_dict['infile'] = input_file
+    cmd_dict['infiles'] = ' '.join([ '--rodBind:%s,vcf %s' % (os.path.basename(f.split('.')[0]), f)
+                                    for f in input_files ])
     cmd_dict['outfile'] = output_file
-    pmsg('Indel Masking', cmd_dict['infile'], cmd_dict['outfile'])
-    python_cmd = '%(make_indel_mask)s ' + \
-            '%(infile)s ' + \
-            '10 ' + \
-            '%(outfile)s'
-    call(python_cmd, cmd_dict, is_logged=False)
+    gatk_cmd = '%(gatk)s ' + \
+            '--analysis_type CreateTriggerTrack ' + \
+            '--reference_sequence %(reference)s ' + \
+            '%(infiles)s ' + \
+            '--out %(outfile)s'
+    call(gatk_cmd, cmd_dict)
 
-# Filter SNPs
-@follows(snp_genotyping, create_indel_mask)
-@transform(snp_genotyping, regex(r'^snps/(.+).snps_raw.vcf$'),
-        inputs([r'snps/\1.snps_raw.vcf', r'indels/\1.indels_mask.bed']),
-        r'snps/\1.snps_filtered.vcf')
+# Apply basic filters to snp calls
+@follows(create_indel_mask)
+@files(['snps/merged.snps_raw.vcf', 'indels/indels_mask.bed'], 'snps/merged.snps_filtered.vcf')
 def filter_snps(input_files, output_file):
-    '''Filter SNP Calls'''
+    '''Apply basic filters to SNPs'''
+    pmsg('Apply basic filters to SNPs', ', '.join(input_files), output_file)
     cmd_dict = CMD_DICT.copy()
-    cmd_dict['snpfile'] = input_files[0]
-    cmd_dict['maskfile'] = input_files[1]
+    cmd_dict['snps'], cmd_dict['mask'] = input_files
     cmd_dict['outfile'] = output_file
-    pmsg('Filter SNPs', ', '.join(input_files), cmd_dict['outfile'])
     gatk_cmd = '%(gatk)s ' + \
             '--analysis_type VariantFiltration ' + \
             '--reference_sequence %(reference)s ' + \
-            '--out %(outfile)s ' + \
-            '--rodBind:variant,VCF %(snpfile)s ' + \
-            '--rodBind:mask,Bed %(maskfile)s ' + \
-            '--maskName InDel ' + \
             '--clusterWindowSize 10 ' + \
-            '--filterExpression %(standard_filter)s ' + \
-            '--filterName \'StandardFilter\' ' + \
             '--filterExpression %(hard_to_validate_filter)s ' + \
-            '--filterName \'HardToValidateFilter\''
+            '--filterName \"HARD_TO_VALIDATE\" ' + \
+            '--rodBind:mask,bed %(mask)s ' + \
+            '--maskName InDel ' + \
+            '--rodBind:variant,vcf %(snps)s ' + \
+            '--out %(outfile)s'
     call(gatk_cmd, cmd_dict)
 
+# Define stages
 stages_dict = {
     'clean': clean_up,
-    'call_indels': indel_genotyping,
-    'filter_indels': filter_indels,
     'call_snps': snp_genotyping,
+    'call_indels': indel_genotyping,
     'create_mask': create_indel_mask,
     'filter_snps': filter_snps,
-    'default': filter_snps
+    'default': filter_snps,
 }
 
