@@ -8,6 +8,7 @@ Currnetly, this means quality score recalibration and variant calling.
 import gzip
 import os
 from Bio import SeqIO
+from bz2 import BZ2File
 from glob import iglob, glob
 
 from ruffus import follows, files, inputs, merge, mkdir, regex, transform
@@ -26,22 +27,30 @@ def copy_sequence_generator():
 @files(copy_sequence_generator)
 def copy_sequence(input_file, output_file):
     '''Copy sequence files from staging area'''
+    GZIP_HEADER = '\x1f\x8b'
+    BZIP_HEADER = 'BZ'
+
     pmsg('Copying sequence files', input_file, output_file)
-    input_file_handle = gzip.open(input_file, 'rb') if input_file.endswith('gz') \
-            else open(input_file)
+    # check if this is actually a gzipped file
+    header = open(input_file).read(2)
+    if header == GZIP_HEADER:
+        input_file_handle = gzip.open(input_file, 'rb')
+    elif header == BZIP_HEADER:
+        input_file_handle = BZ2File(input_file, 'r')
+    else:
+        input_file_handle = open(input_file, 'rb')
     output_file_handle = gzip.open(output_file, 'wb')
+
+    # check whether this is a illumina or sanger fastq file
     try:
-        SeqIO.convert(input_file_handle, 'fastq-illumina', output_file_handle, 'fastq')
-    except ValueError:
-        # this file is already in fastq format
-        if isinstance(input_file_handle, gzip.GzipFile):
-            # this file is already compressed, so just copy it via cp
-            call('cp %(infile)s %(outfile)s', {'infile': input_file, 'outfile': output_file},
-                    is_logged=False)
-        else:
-            # gzip file
-            call('gzip -c %(infile)s > %(outfile)s',
-                    {'infile': input_file, 'outfile': output_file}, is_logged=False)
+        SeqIO.convert(input_file_handle, 'fastq-illumina', output_file_handle, 'fastq-sanger')
+    except ValueError as e:
+        # check if this is a quality score problem
+        if e.args != ('Invalid character in quality string',):
+            raise e
+        input_file_handle.seek(0)
+        output_file_handle.seek(0)
+        output_file_handle.writelines(input_file_handle.readlines())
     finally:
         input_file_handle.close()
         output_file_handle.close()
