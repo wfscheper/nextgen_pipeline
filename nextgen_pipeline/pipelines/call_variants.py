@@ -60,7 +60,7 @@ def snp_genotyping(input_files, output_file):
             '--annotation QualByDepth ' + \
             '--annotation RMSMappingQuality ' + \
             '--annotation HaplotypeScore ' + \
-            '--num_threads 7 ' + \
+            '--num_threads %(threads)s ' + \
             '%(infiles)s ' + \
             '--out %(outfile)s'
     call(gatk_cmd, cmd_dict)

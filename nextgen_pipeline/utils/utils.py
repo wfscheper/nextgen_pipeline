@@ -12,7 +12,7 @@ CMD_DICT = {
     'gatk': '`which gatk.sh`',
     'make_indel_mask': '`makeIndelMask.py`',
     'samtools': '`which samtools`',
-    'threads': '4',
+    'threads': '1',
     'window_size': '200'
 }
 

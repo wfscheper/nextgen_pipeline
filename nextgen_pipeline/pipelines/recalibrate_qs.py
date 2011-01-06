@@ -24,7 +24,7 @@ def call_count_covariates(input_file, output_file):
             '--input_file %(infile)s ' + \
             '--recal_file %(outfile)s ' + \
             '--standard_covs ' + \
-            '--num_threads 2 '
+            '--num_threads %(threads)s '
     call(gatk_cmd, cmd_dict)
 
 def create_intervals_generator():
