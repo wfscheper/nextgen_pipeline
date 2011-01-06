@@ -10,7 +10,7 @@ import os
 from Bio import SeqIO
 from glob import iglob, glob
 
-from ruffus import follows, files, inputs, mkdir, regex, transform
+from ruffus import follows, files, inputs, merge, mkdir, regex, transform
 
 from ..utils import CMD_DICT, call, pmsg, read_group_re
 
@@ -139,7 +139,7 @@ def remove_duplicates(input_file, output_file):
     call(samtools_cmd, cmd_dict, is_logged=False)
 
 @follows(remove_duplicates, mkdir('coverage'))
-@files(glob('deduped/*.bam'), 'coverage/merged.coverage')
+@merge('deduped/*.bam', 'coverage/merged.coverage')
 def calculate_coverage(input_files, output_file):
     '''Calculate coverage statistics'''
     cmd_dict = CMD_DICT.copy()

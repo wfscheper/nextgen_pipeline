@@ -7,7 +7,8 @@ generating an indexed, recalibrated bam file.
 import os
 
 from glob import glob, iglob
-from ruffus import check_if_uptodate, files, follows, inputs, jobs_limit, mkdir, regex, transform
+from ruffus import (check_if_uptodate, files, follows, inputs, jobs_limit, merge, mkdir, regex,
+                    transform)
 
 from ..utils import CMD_DICT, call, check_if_clean, pmsg, filename_re, read_group_re
 
@@ -38,7 +39,7 @@ def clean_up(input_files, output_file):
 # Call SNPs
 @jobs_limit(1)
 @follows(clean_up, mkdir('snps', 'logs'))
-@files(glob('recalibrated/*.bam'), 'snps/merged.snps_raw.vcf')
+@merge('recalibrated/*.bam', 'snps/merged.snps_raw.vcf')
 def snp_genotyping(input_files, output_file):
     '''Call SNP variants'''
     pmsg('SNP Genotyping', ', '.join(input_files), output_file)
@@ -84,7 +85,7 @@ def indel_genotyping(input_files, output_file):
 
 # Create InDel mask
 @follows(indel_genotyping)
-@files(glob('indels/*.indels_raw.vcf'), 'indels/indels_mask.bed')
+@merge('indels/*.indels_raw.vcf', 'indels/indels_mask.bed')
 def create_indel_mask(input_files, output_file):
     '''Create Indel Mask'''
     pmsg('Create Indel Mask', ', '.join(input_files), output_file)
@@ -101,7 +102,7 @@ def create_indel_mask(input_files, output_file):
 
 # Apply basic filters to snp calls
 @follows(create_indel_mask)
-@files(['snps/merged.snps_raw.vcf', 'indels/indels_mask.bed'], 'snps/merged.snps_filtered.vcf')
+@merge(['snps/merged.snps_raw.vcf', 'indels/indels_mask.bed'], 'snps/merged.snps_filtered.vcf')
 def filter_snps(input_files, output_file):
     '''Apply basic filters to SNPs'''
     pmsg('Apply basic filters to SNPs', ', '.join(input_files), output_file)
