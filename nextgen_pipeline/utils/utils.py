@@ -11,7 +11,6 @@ CMD_DICT = {
     'filter_indels': '`which filterSingleSampleCalls.pl`',
     'gatk': '`which gatk.sh`',
     'make_indel_mask': '`makeIndelMask.py`',
-    'picard': '`which picard.sh`',
     'samtools': '`which samtools`',
     'threads': '4',
     'window_size': '200'

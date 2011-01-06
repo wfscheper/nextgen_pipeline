@@ -10,6 +10,7 @@ from glob import iglob as glob
 from ruffus import check_if_uptodate, files, follows, inputs, jobs_limit, mkdir, regex, transform
 
 from ..utils import CMD_DICT, call, check_if_clean, pmsg, filename_re
+import os
 
 
 def call_count_covariates(input_file, output_file):
@@ -86,13 +87,13 @@ def fix_mate_realigned(input_file, output_file):
     cmd_dict = CMD_DICT.copy()
     cmd_dict['infile'] = input_file
     cmd_dict['outfile'] = output_file
+    cmd_dict['outfile_prefix'] = os.path.splitext(output_file)[0]
     pmsg('Fix Mate Info', cmd_dict['infile'], cmd_dict['outfile'])
-    picard_cmd = '%(picard)s FixMateInformation ' + \
-            'INPUT=%(infile)s ' + \
-            'OUTPUT=%(outfile)s ' + \
-            'SORT_ORDER=coordinate ' + \
-            'VALIDATION_STRINGENCY=SILENT'
-    call(picard_cmd, cmd_dict)
+    samtools_cmd = '%(samtools)s view -hu %(infile)s | ' + \
+                   '%(samtools)s sort -no - %(outfile)s | ' + \
+                   '%(samtools)s fixmate - - | ' + \
+                   '%(samtools)s sort - %(outfile_prefix)s'
+    call(samtools_cmd, cmd_dict)
     samtools_cmd = '%(samtools)s index %(outfile)s'
     call(samtools_cmd, cmd_dict, is_logged=False)
 

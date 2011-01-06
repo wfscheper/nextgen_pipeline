@@ -93,12 +93,10 @@ def make_sam(input_files, output_file):
         cmd_dict['infile'] = output_file
         cmd_dict['outfile'] = os.path.splitext(output_file)[0] + '.sorted.sam'
         pmsg('Sorting SAM file', cmd_dict['infile'], cmd_dict['outfile'])
-        picard_cmd = '%(picard)s SortSam ' + \
-                'INPUT=%(infile)s ' + \
-                'OUTPUT=%(outfile)s ' + \
-                'SORT_ORDER=coordinate ' + \
-                'VALIDATION_STRINGENCY=SILENT'
-        call(picard_cmd, cmd_dict)
+        sam_cmd = '%(samtools)s view -hSu %(infile)s | ' + \
+                '%(samtools)s sort -o - %(outfile)s | ' + \
+                '%(samtools)s view -h -o %(outfile)s -'
+        call(sam_cmd, cmd_dict)
         call('rm %(infile)s', cmd_dict, is_logged=False)
         # clip reads
         cmd_dict['infile'] = cmd_dict['outfile']
@@ -118,12 +116,8 @@ def sort_bam(input_file, output_file):
     cmd_dict['outfile'] = output_file
     cmd_dict['outprefix'] = os.path.splitext(cmd_dict['outfile'])[0]
     pmsg('Cooridinate sorting BAM file', cmd_dict['infile'], cmd_dict['outfile'])
-    picard_cmd = '%(picard)s SortSam ' + \
-            'INPUT=%(infile)s ' + \
-            'OUTPUT=%(outfile)s ' + \
-            'SORT_ORDER=coordinate ' + \
-            'VALIDATION_STRINGENCY=SILENT '
-    call(picard_cmd, cmd_dict)
+    sam_cmd = '%(samtools)s view -hSu %(infile)s | %(samtools)s sort - %(outprefix)s'
+    call(sam_cmd, cmd_dict)
 
 # Remove duplicates
 @follows(mkdir('deduped'))
@@ -136,13 +130,8 @@ def remove_duplicates(input_file, output_file):
     if cmd_dict['sam_type'] == 'sampe':
         cmd_dict['metrics'] = output_file.rstrip('bam') + 'metrics'
         pmsg('Removing duplicates', input_file, output_file)
-        picard_cmd = '%(picard)s MarkDuplicates ' + \
-                'INPUT=%(infile)s ' + \
-                'OUTPUT=%(outfile)s ' + \
-                'METRICS_FILE=%(metrics)s ' + \
-                'REMOVE_DUPLICATES=true ' + \
-                'VALIDATION_STRINGENCY=SILENT '
-        call(picard_cmd, cmd_dict)
+        sam_cmd = '%(samtools)s rmdup %(infile)s %(outfile)s'
+        call(sam_cmd, cmd_dict)
     else:
         pmsg('Linking files', input_file, output_file)
         call('ln %(infile)s %(outfile)s', cmd_dict, is_logged=False)
