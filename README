@@ -1,1 +1,1 @@
-Project for building a nextgen pipeline
+A Nextgen pipeline using ruffus, bwa, samtools and Genome Analysis Toolkit

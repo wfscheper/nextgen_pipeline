@@ -1,0 +1,3 @@
+@HD	VN:1.0	SO:coordinate
+@SQ	SN:chr1	LN:800000	UR:file:/Users/wfscheper/Projects/nextgen_pipeline/test/exampleFASTA.fasta	M5:ddd685c8d3e11ee07f6f56af3a301c2a
+chr1	1	800000	+	target_1
